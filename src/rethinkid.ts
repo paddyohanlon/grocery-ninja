@@ -1,22 +1,25 @@
 import { RethinkID } from '@mostlytyped/rethinkid-js-sdk'
+import type { Options } from '@mostlytyped/rethinkid-js-sdk'
 
 console.log('app ID', import.meta.env.VITE_APP_ID)
 
-export const rid = new RethinkID({
+const config: Options = {
   appId: import.meta.env.VITE_APP_ID,
-  loginRedirectUri: 'http://127.0.0.1:5173',
-  oAuthUri: 'http://localhost:4444',
-  dataApiUri: 'http://localhost:4000',
-  // onLogin: () => {
-  //   console.log('onLogin callback fired in config!')
-  // },
+  loginRedirectUri: import.meta.env.VITE_APP_ID,
   onApiConnectError: (rid, message) => {
     console.log('onApiConnectError callback fired! Message:', message)
   },
-})
+}
+
+if (import.meta.env.DEV) {
+  config.oAuthUri = 'http://localhost:4444'
+  config.dataApiUri = 'http://localhost:4000'
+}
+
+export const rid = new RethinkID(config)
 
 export const LISTS_TABLE_NAME = 'lists'
-export const ORDER_TABLE_NAME = 'orderC'
+export const ORDER_TABLE_NAME = 'order'
 
 export const listsTable = rid.table(LISTS_TABLE_NAME)
 export const orderTable = rid.table(ORDER_TABLE_NAME, {
