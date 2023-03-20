@@ -1,0 +1,2 @@
+[build.environment]
+NPM_TOKEN = "$NPM_TOKEN"
