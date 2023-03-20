@@ -19,6 +19,7 @@ const authStore = useAuthStore()
 const listsStore = useListsStore()
 
 function onLogin() {
+  console.log('onLogin fired')
   authStore.setLoggedIn(true)
 
   rid.users.getInfo().then((response) => {
@@ -39,8 +40,10 @@ function onLogin() {
 }
 
 if (rid.isLoggedIn()) {
+  console.log('logged in')
   onLogin()
 } else {
+  console.log('NOT logged in')
   loading.value = false
 
   rid.onLogin(() => {
