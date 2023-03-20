@@ -171,6 +171,7 @@ export const useListsStore = defineStore('lists', {
     },
     getItem: (state): ((listId: string, itemId: string) => ListItem | null) => {
       return (listId: string, itemId: string) => {
+        // @ts-ignore - getter does exist
         const list = state.getList(listId) as List | null
 
         if (!list) return null
@@ -187,6 +188,7 @@ export const useListsStore = defineStore('lists', {
     },
     getCheckedItems: (state): ((listId: string) => ListItem[]) => {
       return (listId: string) => {
+        // @ts-ignore - getter does exist
         const list = state.getList(listId) as List | null
 
         if (!list) return []
@@ -200,6 +202,7 @@ export const useListsStore = defineStore('lists', {
     },
     getUncheckedItems: (state): ((listId: string) => ListItem[]) => {
       return (listId: string) => {
+        // @ts-ignore - getter does exist
         const list = state.getList(listId) as List | null
 
         if (!list) return []

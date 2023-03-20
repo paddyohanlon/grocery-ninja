@@ -126,7 +126,10 @@ function updateList() {
                   <li>
                     <button
                       v-if="!list.isPrimary"
-                      @click="store.makeListPrimary(list.id)"
+                      @click="
+                        //@ts-ignore
+                        store.makeListPrimary(list.id)
+                      "
                       class="link-button"
                     >
                       Make list primary
