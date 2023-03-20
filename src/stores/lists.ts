@@ -10,15 +10,33 @@ export const useListsStore = defineStore('lists', {
   }),
   actions: {
     async fetchLists(): Promise<void> {
-      const lists = (await listsTable.read({ orderBy: { id: 'desc' } })) as List[]
+      let lists = [] as List[]
+      try {
+        lists = (await listsTable.read()) as List[]
+      } catch (e) {
+        console.log('read lists error', e)
+      }
+
+      console.log('read lists', lists)
 
       if (lists.length === 0) {
+        console.log('create default list')
         // Create default list
         await this.createList('Groceries')
         return
       }
 
-      const listsOrderDoc = (await orderTable.read({ rowId: LISTS_TABLE_NAME })) as OrderTableDoc
+      let listsOrderDoc = null
+      try {
+        listsOrderDoc = (await orderTable.read({ rowId: LISTS_TABLE_NAME })) as OrderTableDoc
+      } catch (e) {
+        console.log('error reading order', e)
+      }
+
+      if (!listsOrderDoc) {
+        console.log('order null, return')
+        return
+      }
 
       this.listsOrder = listsOrderDoc.order
 
