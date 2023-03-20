@@ -22,8 +22,10 @@ export const useListsStore = defineStore('lists', {
       if (lists.length === 0) {
         console.log('create default list')
         // Create default list
-        await this.createList('Groceries')
+        await this.createList('Groceries') // not added to order doc when created for some reason.
         return
+      } else {
+        console.log('default list already created, continue')
       }
 
       let listsOrderDoc = null
@@ -33,10 +35,14 @@ export const useListsStore = defineStore('lists', {
         console.log('error reading order', e)
       }
 
+      console.log('listsOrderDoc', listsOrderDoc)
+
       if (!listsOrderDoc) {
         console.log('order null, return')
         return
       }
+
+      console.log('set ordrer')
 
       this.listsOrder = listsOrderDoc.order
 
@@ -45,6 +51,8 @@ export const useListsStore = defineStore('lists', {
       ) as List[]
 
       this.lists = orderedLists
+
+      console.log('this.lists', this.lists)
     },
     getPrimaryListId(): string | null {
       if (!this.lists) return null

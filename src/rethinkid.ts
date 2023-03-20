@@ -11,10 +11,10 @@ const config: Options = {
   },
 }
 
-if (import.meta.env.DEV) {
-  config.oAuthUri = 'http://localhost:4444'
-  config.dataApiUri = 'http://localhost:4000'
-}
+// if (import.meta.env.DEV) {
+//   config.oAuthUri = 'http://localhost:4444'
+//   config.dataApiUri = 'http://localhost:4000'
+// }
 
 export const rid = new RethinkID(config)
 
