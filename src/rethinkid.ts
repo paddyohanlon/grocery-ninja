@@ -5,7 +5,7 @@ console.log('app ID', import.meta.env.VITE_APP_ID)
 
 const config: Options = {
   appId: import.meta.env.VITE_APP_ID,
-  loginRedirectUri: import.meta.env.VITE_APP_ID,
+  loginRedirectUri: import.meta.env.VITE_REDIRECT_URI,
   onApiConnectError: (rid, message) => {
     console.log('onApiConnectError callback fired! Message:', message)
   },
