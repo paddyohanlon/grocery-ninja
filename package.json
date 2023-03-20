@@ -13,7 +13,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "@mostlytyped/rethinkid-js-sdk": "^0.10.0",
+    "@rethinkid/rethinkid-js-sdk": "^0.10.0",
     "pinia": "^2.0.32",
     "query-string": "^7.1.1",
     "uuid": "^9.0.0",

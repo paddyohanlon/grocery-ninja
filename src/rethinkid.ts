@@ -1,5 +1,5 @@
-import { RethinkID } from '@mostlytyped/rethinkid-js-sdk'
-import type { Options } from '@mostlytyped/rethinkid-js-sdk'
+import { RethinkID } from '@rethinkid/rethinkid-js-sdk'
+import type { Options } from '@rethinkid/rethinkid-js-sdk'
 
 console.log('app ID', import.meta.env.VITE_APP_ID)
 
@@ -24,6 +24,7 @@ export const ORDER_TABLE_NAME = 'order'
 export const listsTable = rid.table(LISTS_TABLE_NAME)
 export const orderTable = rid.table(ORDER_TABLE_NAME, {
   onCreate: async () => {
-    rid.table(ORDER_TABLE_NAME).insert({ id: LISTS_TABLE_NAME, order: [] })
+    console.log('insert after create order table')
+    await rid.table(ORDER_TABLE_NAME).insert({ id: LISTS_TABLE_NAME, order: [] })
   },
 })
