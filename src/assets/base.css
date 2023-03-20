@@ -1,0 +1,38 @@
+:root {
+  --color-background: #222;
+  --color-background-shadow: #1a1a1a;
+  --color-border: rgba(84, 84, 84, 0.48);
+  --color-text: rgba(235, 235, 235, 0.64);
+
+  --color-green: #00bd7e;
+  --color-green-hover: #07a570;
+  --color-red: #c73f3f;
+  --color-black: #111;
+  --color-white: #fff;
+
+  --color-link-hover: hsla(160, 100%, 37%, 0.2);
+
+  --header-height: 48px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  position: relative;
+  font-weight: normal;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--color-text);
+  background: var(--color-background);
+  transition: color 0.5s, background-color 0.5s;
+  line-height: 1.6;
+  font-family: sans-serif;
+  font-weight: normal;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
