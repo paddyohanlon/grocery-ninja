@@ -1,0 +1,1 @@
+export const STATE_CHANGE_DURATION_MS = 600;

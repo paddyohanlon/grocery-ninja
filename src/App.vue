@@ -1,58 +1,60 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { RouterLink, RouterView } from 'vue-router'
-import { rid } from '@/rethinkid'
-import { useAuthStore } from '@/stores/auth'
-import { useListsStore } from '@/stores/lists'
-import { useRouter, useRoute } from 'vue-router'
-import { HOME, LIST } from '@/router/route-names'
+import { ref } from "vue";
+import { RouterLink, RouterView } from "vue-router";
+import { rid } from "@/rethinkid";
+import { useAuthStore } from "@/stores/auth";
+import { useListsStore } from "@/stores/lists";
+import { useRouter, useRoute } from "vue-router";
+import { HOME, CONTACTS, LIST } from "@/router/route-names";
 
-const router = useRouter()
-const route = useRoute()
+const router = useRouter();
+const route = useRoute();
 
-const loading = ref(true)
-const userId = ref('')
+const loading = ref(true);
+const userId = ref("");
 
-const accountDropdownIsVisible = ref(false)
+const accountDropdownIsVisible = ref(false);
 
-const authStore = useAuthStore()
-const listsStore = useListsStore()
+const authStore = useAuthStore();
+const listsStore = useListsStore();
 
 function onLogin() {
-  console.log('onLogin fired')
-  authStore.setLoggedIn(true)
+  authStore.setLoggedIn(true);
 
   rid.users.getInfo().then((response) => {
-    userId.value = response.id
-  })
+    userId.value = response.id;
+  });
 
   listsStore.fetchLists().then(() => {
-    if (listsStore.lists === null) return
-    loading.value = false
+    if (listsStore.lists === null) return;
+    loading.value = false;
 
     // Redirect the home route to the primary list
-    if (route.name !== HOME) return
+    if (route.name !== HOME) return;
 
-    const primaryListId = listsStore.getPrimaryListId()
-    if (!primaryListId) return
-    router.push({ name: LIST, params: { listId: primaryListId } })
-  })
+    const primaryListId = listsStore.getPrimaryListId;
+    if (!primaryListId) return;
+    router.push({ name: LIST, params: { listId: primaryListId } });
+  });
+}
+
+function goToContacts() {
+  router.push({ name: CONTACTS });
+  accountDropdownIsVisible.value = false;
 }
 
 if (rid.isLoggedIn()) {
-  console.log('logged in')
-  onLogin()
+  onLogin();
 } else {
-  console.log('NOT logged in')
-  loading.value = false
+  loading.value = false;
 
   rid.onLogin(() => {
-    onLogin()
-  })
+    onLogin();
+  });
 }
 
 function toggleAccountDropdown() {
-  accountDropdownIsVisible.value = !accountDropdownIsVisible.value
+  accountDropdownIsVisible.value = !accountDropdownIsVisible.value;
 }
 </script>
 
@@ -97,7 +99,8 @@ function toggleAccountDropdown() {
               aria-labelledby="toggle-account-button"
             >
               <ul class="account-dropdown-list list-reset">
-                <li>{{ userId }}</li>
+                <li>My ID: {{ userId }}</li>
+                <li><button @click="goToContacts()" class="link-button">Contacts</button></li>
                 <li><button @click="rid.logOut()" class="link-button">Sign out</button></li>
               </ul>
             </div>
@@ -151,15 +154,6 @@ function toggleAccountDropdown() {
   align-items: stretch;
 }
 
-.account-dropdown {
-  top: var(--header-height);
-}
-
-.account-dropdown-list {
-  font-size: 13px;
-  line-height: 2;
-}
-
 .header-button {
   color: var(--color-white);
   display: flex;
@@ -176,5 +170,17 @@ function toggleAccountDropdown() {
 .header-button:hover,
 .header-button-active {
   background-color: var(--color-green-hover);
+}
+
+.account-dropdown {
+  top: var(--header-height);
+}
+
+.account-dropdown-list {
+  font-size: 13px;
+  line-height: 2;
+}
+.account-dropdown-list a:hover {
+  background: transparent;
 }
 </style>

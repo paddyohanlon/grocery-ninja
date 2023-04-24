@@ -1,80 +1,81 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useListsStore } from '@/stores/lists'
-import { useRoute, useRouter } from 'vue-router'
-import { HOME, LIST_ITEM } from '@/router/route-names'
-import ListsSidebar from '@/components/ListsSidebar.vue'
-import CheckItemButton from '@/components/CheckItemButton.vue'
+import { ref, watch } from "vue";
+import { useListsStore } from "@/stores/lists";
+import { useRoute, useRouter } from "vue-router";
+import { HOME, LIST_ITEM } from "@/router/route-names";
+import ListsSidebar from "@/components/ListsSidebar.vue";
+import CheckItemButton from "@/components/CheckItemButton.vue";
+import { STATE_CHANGE_DURATION_MS } from "@/timing";
 
-const store = useListsStore()
+const store = useListsStore();
 
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
-const newItemName = ref('')
+const newItemName = ref("");
 
-const updatingList = ref(false)
+const updatingList = ref(false);
 
-const checkedListIsVisible = ref(false)
-const listDropdownIsVisible = ref(false)
+const checkedListIsVisible = ref(false);
+const listDropdownIsVisible = ref(false);
 
-const listIdParam = ref(route.params.listId as string)
-const itemIdParam = ref(route.params.itemId as string)
+const listIdParam = ref(route.params.listId as string);
+const itemIdParam = ref(route.params.itemId as string);
 
-const list = ref(store.getList(listIdParam.value))
-const newList = ref(Object.assign({}, list.value))
+const list = ref(store.getList(listIdParam.value));
+const newList = ref(Object.assign({}, list.value));
 
 watch(
   () => route.params.listId,
   (newId) => {
-    listDropdownIsVisible.value = false
-    listIdParam.value = newId as string
-    list.value = store.getList(listIdParam.value)
+    listDropdownIsVisible.value = false;
+    listIdParam.value = newId as string;
+    list.value = store.getList(listIdParam.value);
 
-    if (!list.value) return
-    newList.value = Object.assign({}, list.value)
+    if (!list.value) return;
+    newList.value = Object.assign({}, list.value);
   },
-)
+);
 
 watch(
   () => route.params.itemId,
   (newId) => {
-    listDropdownIsVisible.value = false
-    itemIdParam.value = newId as string
+    listDropdownIsVisible.value = false;
+    itemIdParam.value = newId as string;
   },
-)
+);
 
 function addItem() {
-  store.addItem(listIdParam.value, newItemName.value)
-  newItemName.value = ''
+  store.addItem(listIdParam.value, newItemName.value);
+  newItemName.value = "";
 }
 
 function toggleCheckedList() {
-  checkedListIsVisible.value = !checkedListIsVisible.value
+  checkedListIsVisible.value = !checkedListIsVisible.value;
 }
 
 function toggleListDropdown() {
-  listDropdownIsVisible.value = !listDropdownIsVisible.value
+  listDropdownIsVisible.value = !listDropdownIsVisible.value;
 }
 
 function deleteList() {
-  if (window.confirm('Are you sure you want to delete this list?')) {
-    if (!list.value) return
+  if (window.confirm("Are you sure you want to delete this list?")) {
+    if (!list.value) return;
 
-    store.deleteList(list.value)
-    router.push({ name: HOME })
+    store.deleteList(list.value);
+    router.push({ name: HOME });
   }
 }
 
 function updateList() {
-  if (!list.value) return
+  if (!list.value) return;
 
-  list.value = Object.assign(list.value, newList.value)
+  list.value = Object.assign(list.value, newList.value);
 
-  updatingList.value = true
-  setTimeout(() => (updatingList.value = false), 600)
+  updatingList.value = true;
+  setTimeout(() => (updatingList.value = false), STATE_CHANGE_DURATION_MS);
 
-  store.updateList(listIdParam.value, list.value)
+  store.updateList(list.value);
 }
 </script>
 
@@ -167,9 +168,7 @@ function updateList() {
               class="item"
             >
               <CheckItemButton :listId="listIdParam" :item="item" />
-              <RouterLink
-                :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }"
-              >
+              <RouterLink :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }">
                 {{ item.name }}
               </RouterLink>
             </li>
@@ -184,13 +183,8 @@ function updateList() {
                 aria-controls="checked-dropdown"
                 :aria-expanded="checkedListIsVisible"
               >
-                <span :class="{ 'is-open': checkedListIsVisible }" class="disclose-triangle"
-                  >&rsaquo;</span
-                >
-                <span
-                  ><span class="is-bold">Checked</span>
-                  {{ store.getCheckedItems(listIdParam).length }}</span
-                >
+                <span :class="{ 'is-open': checkedListIsVisible }" class="disclose-triangle">&rsaquo;</span>
+                <span><span class="is-bold">Checked</span> {{ store.getCheckedItems(listIdParam).length }}</span>
               </button>
             </h3>
 
@@ -207,9 +201,7 @@ function updateList() {
                 class="item"
               >
                 <CheckItemButton :listId="listIdParam" :item="item" />
-                <RouterLink
-                  :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }"
-                >
+                <RouterLink :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }">
                   {{ item.name }}
                 </RouterLink>
               </li>
@@ -263,7 +255,7 @@ function updateList() {
 
 .item-name-input {
   background: var(--color-black);
-  border-radius: 5px 5px 0 0;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
   width: 100%;
 }
 
@@ -272,7 +264,7 @@ function updateList() {
   justify-content: flex-end;
 
   background: #000;
-  border-radius: 0 0 5px 5px;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
   padding: 10px;
 }
 
@@ -301,7 +293,7 @@ function updateList() {
 
   background: var(--color-black);
   box-shadow: 3px 3px 3px var(--color-background-shadow);
-  border-radius: 5px;
+  border-radius: var(--border-radius);
   margin-bottom: 10px;
   padding: 10px 15px;
   position: relative;
@@ -324,7 +316,7 @@ function updateList() {
   right: 0;
   bottom: 0;
   left: 0;
-  content: '';
+  content: "";
 }
 
 .checked-title {

@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { rid } from '@/rethinkid'
-import { useAuthStore } from '@/stores/auth'
-import { useListsStore } from '@/stores/lists'
-import { useRouter } from 'vue-router'
-import { LIST } from '@/router/route-names'
+import { rid } from "@/rethinkid";
+import { useAuthStore } from "@/stores/auth";
+import { useListsStore } from "@/stores/lists";
+import { useRouter } from "vue-router";
+import { LIST } from "@/router/route-names";
 
-const authStore = useAuthStore()
-const listsStore = useListsStore()
+const authStore = useAuthStore();
+const listsStore = useListsStore();
 
-const router = useRouter()
+const router = useRouter();
 
 if (authStore.loggedIn) {
-  const primaryListId = listsStore.getPrimaryListId()
+  const primaryListId = listsStore.getPrimaryListId;
   if (primaryListId) {
-    router.push({ name: LIST, params: { listId: primaryListId } })
+    router.push({ name: LIST, params: { listId: primaryListId } });
   }
 }
 </script>

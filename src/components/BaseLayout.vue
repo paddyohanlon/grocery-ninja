@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from "vue";
 
-const SIDEBAR_LEFT_IS_VISIBLE = 'sidebarLeftIsVisible'
+const SIDEBAR_LEFT_IS_VISIBLE = "sidebarLeftIsVisible";
 
 function getLocalStorageBoolean(key: string): boolean {
-  return localStorage.getItem(key) === 'true' ? true : false
+  return localStorage.getItem(key) === "true" ? true : false;
 }
 
-const sidebarLeftIsVisible = ref(getLocalStorageBoolean(SIDEBAR_LEFT_IS_VISIBLE))
+const sidebarLeftIsVisible = ref(getLocalStorageBoolean(SIDEBAR_LEFT_IS_VISIBLE));
 
 function toggleSidebarLeft(): void {
-  sidebarLeftIsVisible.value = !sidebarLeftIsVisible.value
+  sidebarLeftIsVisible.value = !sidebarLeftIsVisible.value;
 
-  localStorage.setItem(SIDEBAR_LEFT_IS_VISIBLE, sidebarLeftIsVisible.value.toString())
+  localStorage.setItem(SIDEBAR_LEFT_IS_VISIBLE, sidebarLeftIsVisible.value.toString());
 }
 </script>
 

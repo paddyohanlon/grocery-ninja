@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { PropType } from 'vue'
-import { useListsStore } from '@/stores/lists'
-import type { ListItem } from '@/types'
+import { ref } from "vue";
+import type { PropType } from "vue";
+import { useListsStore } from "@/stores/lists";
+import type { ListItem } from "@/types";
 
-const store = useListsStore()
+const store = useListsStore();
 
 const props = defineProps({
   listId: {
@@ -15,13 +15,13 @@ const props = defineProps({
     type: Object as PropType<ListItem>,
     required: true,
   },
-})
+});
 
-const item = ref(props.item)
+const item = ref(props.item);
 
 function toggleItemChecked() {
-  item.value.checked = !item.value.checked
-  store.updateItem(props.listId, item.value)
+  item.value.checked = !item.value.checked;
+  store.updateItem(props.listId, item.value);
 }
 </script>
 
@@ -52,6 +52,6 @@ function toggleItemChecked() {
   position: absolute;
   top: 0;
   left: 3px;
-  content: '\2713';
+  content: "\2713";
 }
 </style>

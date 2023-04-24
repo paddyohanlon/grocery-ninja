@@ -1,4 +1,4 @@
-@import './base.css';
+@import "./base.css";
 
 #app {
   height: 100vh;
@@ -34,14 +34,6 @@ a,
   white-space: nowrap;
 }
 
-.is-invisible {
-  opacity: 0;
-}
-
-.is-bold {
-  font-weight: 700;
-}
-
 .list-reset {
   margin: 0;
   padding: 0;
@@ -51,7 +43,7 @@ a,
 .button {
   background-color: transparent;
   border: 1px solid var(--color-green);
-  border-radius: 5px;
+  border-radius: var(--border-radius);
   color: var(--color-green);
   cursor: pointer;
   display: inline-block;
@@ -64,9 +56,18 @@ a,
   text-decoration: none;
 }
 
+.button-orange {
+  border: 1px solid var(--color-orange);
+  color: var(--color-orange);
+}
+
 .button-danger {
   border: 1px solid var(--color-red);
   color: var(--color-red);
+}
+
+.button-disabled {
+  cursor: default;
 }
 
 .link-button {
@@ -86,8 +87,8 @@ a,
 
 .text-input {
   background: transparent;
-  border: none;
-  border-radius: 0;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius);
   caret-color: var(--color-green);
   color: var(--color-white);
   font-family: sans-serif;
@@ -114,4 +115,36 @@ a,
   justify-content: flex-end;
 
   margin-top: 2rem;
+}
+
+.form-control {
+  margin-bottom: 10px;
+}
+
+.form-control-label {
+  display: block;
+}
+
+/* Modifiers (need to come last) */
+.is-invisible {
+  opacity: 0;
+}
+
+.is-bold {
+  font-weight: 700;
+}
+
+.is-full-width {
+  width: 100%;
+}
+
+.has-black-border {
+  border-color: var(--color-black);
+}
+
+.card {
+  background: var(--color-black);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
 }

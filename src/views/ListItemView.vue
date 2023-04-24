@@ -1,66 +1,67 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { LIST } from '@/router/route-names'
-import { useListsStore } from '@/stores/lists'
-import CheckItemButton from '@/components/CheckItemButton.vue'
+import { ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { LIST } from "@/router/route-names";
+import { useListsStore } from "@/stores/lists";
+import CheckItemButton from "@/components/CheckItemButton.vue";
+import { STATE_CHANGE_DURATION_MS } from "@/timing";
 
-const store = useListsStore()
+const store = useListsStore();
 
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
-const listIdParam = ref(route.params.listId as string)
-const itemIdParam = ref(route.params.itemId as string)
+const listIdParam = ref(route.params.listId as string);
+const itemIdParam = ref(route.params.itemId as string);
 
-const item = ref(store.getItem(listIdParam.value, itemIdParam.value))
-const newItem = ref(Object.assign({}, item.value))
+const item = ref(store.getItem(listIdParam.value, itemIdParam.value));
+const newItem = ref(Object.assign({}, item.value));
 
-const sidebarRightIsVisible = ref(false)
+const sidebarRightIsVisible = ref(false);
 
-const updateButtonTextInitial = 'Update'
-const updateButtonTextUpdating = 'Updating...'
+const updateButtonTextInitial = "Update";
+const updateButtonTextUpdating = "Updating...";
 
-const updateButtonText = ref(updateButtonTextInitial)
+const updateButtonText = ref(updateButtonTextInitial);
 
 watch(
   () => route.params.itemId,
   (newId) => {
-    itemIdParam.value = newId as string
+    itemIdParam.value = newId as string;
     if (itemIdParam.value) {
-      sidebarRightIsVisible.value = true
-      item.value = store.getItem(listIdParam.value, itemIdParam.value)
+      sidebarRightIsVisible.value = true;
+      item.value = store.getItem(listIdParam.value, itemIdParam.value);
 
-      if (!item.value) return
-      newItem.value = Object.assign({}, item.value)
+      if (!item.value) return;
+      newItem.value = Object.assign({}, item.value);
     } else {
-      sidebarRightIsVisible.value = false
+      sidebarRightIsVisible.value = false;
     }
   },
   { immediate: true },
-)
+);
 
 function closeItem() {
-  router.push({ name: LIST, params: { listId: listIdParam.value } })
+  router.push({ name: LIST, params: { listId: listIdParam.value } });
 }
 
 function updateItem() {
-  if (updateButtonText.value === updateButtonTextUpdating) return
+  if (updateButtonText.value === updateButtonTextUpdating) return;
 
-  if (!item.value) return
+  if (!item.value) return;
 
-  item.value = Object.assign(item.value, newItem.value)
+  item.value = Object.assign(item.value, newItem.value);
 
-  updateButtonText.value = updateButtonTextUpdating
-  setTimeout(() => (updateButtonText.value = updateButtonTextInitial), 600)
+  updateButtonText.value = updateButtonTextUpdating;
+  setTimeout(() => (updateButtonText.value = updateButtonTextInitial), STATE_CHANGE_DURATION_MS);
 
-  store.updateItem(listIdParam.value, item.value)
+  store.updateItem(listIdParam.value, item.value);
 }
 
 function deleteItem() {
-  if (window.confirm('Are you sure you want to delete this item?')) {
-    store.deleteItem(listIdParam.value, itemIdParam.value)
-    closeItem()
+  if (window.confirm("Are you sure you want to delete this item?")) {
+    store.deleteItem(listIdParam.value, itemIdParam.value);
+    closeItem();
   }
 }
 </script>
@@ -85,7 +86,7 @@ function deleteItem() {
               <input
                 id="new-name"
                 v-model="newItem.name"
-                class="text-input"
+                class="is-full-width"
                 type="text"
                 placeholder="Item name"
                 maxlength="255"
@@ -99,7 +100,7 @@ function deleteItem() {
               <input
                 id="new-price"
                 v-model="newItem.price"
-                class="item-input text-input"
+                class="item-input is-full-width"
                 type="number"
                 autocomplete="off"
                 step="0.01"
@@ -111,7 +112,7 @@ function deleteItem() {
               <input
                 id="new-quantity"
                 v-model="newItem.quantity"
-                class="item-input text-input"
+                class="item-input is-full-width"
                 type="number"
                 autocomplete="off"
                 step="0.01"
@@ -123,7 +124,7 @@ function deleteItem() {
               <input
                 id="new-vendor"
                 v-model="newItem.vendor"
-                class="item-input text-input"
+                class="item-input is-full-width"
                 type="text"
                 autocomplete="off"
               />
@@ -131,14 +132,10 @@ function deleteItem() {
 
             <div class="form-control">
               <label class="form-control-label" for="new-notes">Notes</label>
-              <textarea
-                id="new-notes"
-                v-model="newItem.notes"
-                class="item-input text-input"
-              ></textarea>
+              <textarea id="new-notes" v-model="newItem.notes" class="item-input is-full-width"></textarea>
             </div>
 
-            <button class="update-button button">{{ updateButtonText }}</button>
+            <button class="button">{{ updateButtonText }}</button>
           </form>
 
           <div class="danger-zone">
@@ -197,18 +194,6 @@ function deleteItem() {
 
 .item-input {
   border: 1px solid var(--color-black);
-  border-radius: 5px;
-}
-
-.form-control {
-  margin-bottom: 10px;
-}
-
-.text-input {
-  width: 100%;
-}
-
-.form-control-label {
-  display: block;
+  border-radius: var(--border-radius);
 }
 </style>

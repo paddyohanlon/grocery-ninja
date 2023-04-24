@@ -1,67 +1,51 @@
-import { defineStore } from 'pinia'
-import type { List, NewList, ListItem, OrderTableDoc } from '@/types'
-import { listsTable, orderTable, LISTS_TABLE_NAME } from '@/rethinkid'
-import { v4 as uuidv4 } from 'uuid'
+import { defineStore } from "pinia";
+import type { List, NewList, ListItem, OrderTableDoc } from "@/types";
+import { listsTable, orderTable, LISTS_TABLE_NAME } from "@/rethinkid";
+import { v4 as uuidv4 } from "uuid";
 
-export const useListsStore = defineStore('lists', {
+export const useListsStore = defineStore("lists", {
   state: () => ({
     lists: null as List[] | null,
     listsOrder: [] as string[], // list IDs
   }),
   actions: {
     async fetchLists(): Promise<void> {
-      let lists = [] as List[]
+      let lists = [] as List[];
       try {
-        lists = (await listsTable.read()) as List[]
+        lists = (await listsTable.read()) as List[];
       } catch (e) {
-        console.log('read lists error', e)
+        console.log("read lists error", e);
       }
-
-      console.log('read lists', lists)
 
       if (lists.length === 0) {
-        console.log('create default list')
+        console.log("create default list");
         // Create default list
-        await this.createList('Groceries') // not added to order doc when created for some reason.
-        return
-      } else {
-        console.log('default list already created, continue')
+        await this.createList("Groceries");
+        return;
       }
 
-      let listsOrderDoc = null
+      let listsOrderDoc = null;
       try {
-        listsOrderDoc = (await orderTable.read({ rowId: LISTS_TABLE_NAME })) as OrderTableDoc
+        listsOrderDoc = (await orderTable.read({ rowId: LISTS_TABLE_NAME })) as OrderTableDoc;
       } catch (e) {
-        console.log('error reading order', e)
+        console.log("error reading order", e);
       }
-
-      console.log('listsOrderDoc', listsOrderDoc)
 
       if (!listsOrderDoc) {
-        console.log('order null, return')
-        return
+        console.log("listsOrderDoc null, return");
+        return;
       }
 
-      console.log('set ordrer')
+      this.listsOrder = listsOrderDoc.order;
 
-      this.listsOrder = listsOrderDoc.order
+      const orderedLists = listsOrderDoc.order.map((id) => {
+        const foundList = lists.find((list) => {
+          return list.id === id;
+        })
+        return foundList;
+      }) as List[];
 
-      const orderedLists = this.listsOrder.map((id) =>
-        lists.find((list) => list.id === id),
-      ) as List[]
-
-      this.lists = orderedLists
-
-      console.log('this.lists', this.lists)
-    },
-    getPrimaryListId(): string | null {
-      if (!this.lists) return null
-
-      const primaryList = this.lists.find((list) => list.isPrimary)
-
-      if (!primaryList) return null
-
-      return primaryList.id
+      this.lists = orderedLists;
     },
     async createList(name: string): Promise<string> {
       const newList: NewList = {
@@ -69,176 +53,213 @@ export const useListsStore = defineStore('lists', {
         items: [],
         archived: false,
         isPrimary: !this.lists || (this.lists && this.lists.length === 0),
-      }
+      };
 
-      const id = await listsTable.insert(newList)
+      const id = await listsTable.insert(newList);
 
-      this.listsOrder.push(id)
-      const orderDoc: OrderTableDoc = { id: LISTS_TABLE_NAME, order: this.listsOrder }
-      await orderTable.update(orderDoc)
+      const firstId = id[0];
+
+      this.listsOrder.push(firstId);
+      const orderDoc: OrderTableDoc = { id: LISTS_TABLE_NAME, order: this.listsOrder };
+      await orderTable.update(orderDoc);
 
       const list: List = {
-        id,
+        id: firstId,
         ...newList,
-      }
+      };
 
-      if (!this.lists) this.lists = []
+      if (!this.lists) this.lists = [];
 
-      this.lists.push(list)
+      this.lists.push(list);
 
-      return id
+      return firstId;
     },
-    async updateList(listId: string, updatedList: List): Promise<void> {
-      if (!this.lists) return
+    async updateList(updatedList: List): Promise<void> {
+      if (!this.lists) return;
 
-      await listsTable.update(updatedList)
+      await listsTable.update(updatedList);
 
       this.lists = this.lists.map((list) => {
         if (list.id === updatedList.id) {
-          return updatedList
+          return updatedList;
         }
-        return list
-      })
+        return list;
+      });
     },
-    deleteList({ id, isPrimary }: List): void {
-      if (!this.lists) return
+    async deleteList({ id, isPrimary }: List): Promise<void> {
+      if (!this.lists) return;
 
-      listsTable.delete({ rowId: id })
+      listsTable.delete({ rowId: id });
 
       this.lists = this.lists.filter((list) => {
-        return list.id !== id
-      })
+        return list.id !== id;
+      });
 
-      listsTable.delete({ rowId: id })
+      console.log("this.lists after filter", this.lists);
 
-      const index = this.listsOrder.indexOf(id)
+      listsTable.delete({ rowId: id });
+
+      const index = this.listsOrder.indexOf(id);
+      console.log("this.listsOrder before", this.listsOrder);
+      console.log("index of list to delete", index);
       if (index > -1) {
-        this.listsOrder.splice(index, 1)
+        console.log('splice');
+        this.listsOrder.splice(index, 1);
       }
-      const orderDoc: OrderTableDoc = { id: LISTS_TABLE_NAME, order: this.listsOrder }
-      orderTable.update(orderDoc)
+      console.log("this.listsOrder after splice", this.listsOrder);
+      const orderDoc: OrderTableDoc = { id: LISTS_TABLE_NAME, order: this.listsOrder };
 
-      console.log('isPrimary', isPrimary)
+      console.log("orderDoc", orderDoc);
+      
+      try {
+        const updateRes = await orderTable.replace(orderDoc);
+        console.log("updateRes", updateRes);
+      } catch (e) {
+        console.log("ordertable update e", e);
+      }
 
-      // Set a new primary list
+      console.log("just updated order table, fetch to check");
+
+      try {
+        const res = (await orderTable.read({ rowId: LISTS_TABLE_NAME })) as OrderTableDoc;
+        console.log("order table fetch res", res);
+      } catch (e) {
+        console.log("error reading order", e);
+      }
+
+      // Set ait new primary list
       if (isPrimary) {
-        this.makeListPrimary(this.listsOrder[0])
+        this.makeListPrimary(this.listsOrder[0]);
       }
     },
     makeListPrimary(newPrimaryListId: string): void {
-      if (!this.lists) return
+      if (!this.lists) return;
 
       this.lists = this.lists.map((list) => {
-        list.isPrimary = list.id === newPrimaryListId
-        return list
-      })
+        list.isPrimary = list.id === newPrimaryListId;
+        return list;
+      });
 
       for (const list of this.lists) {
-        listsTable.update(list)
+        listsTable.update(list);
       }
     },
     addItem(listId: string, itemName: string): void {
-      const list = this.getList(listId)
+      const list = this.getList(listId);
 
-      if (!list) return
+      if (!list) return;
 
       const newItem: ListItem = {
         id: uuidv4(),
         name: itemName,
         price: 0,
-        vendor: '',
+        vendor: "",
         quantity: 0,
-        notes: '',
+        notes: "",
         checked: false,
-      }
+      };
 
-      list.items.push(newItem)
+      list.items.push(newItem);
 
-      listsTable.update(list)
+      listsTable.update(list);
     },
     updateItem(listId: string, updatedItem: ListItem) {
-      const list = this.getList(listId)
+      const list = this.getList(listId);
 
-      if (!list) return
+      if (!list) return;
 
       list.items = list.items.map((item) => {
         if (item.id === updatedItem.id) {
-          return updatedItem
+          return updatedItem;
         }
-        return item
-      })
+        return item;
+      });
 
-      listsTable.update(list)
+      listsTable.update(list);
     },
-    deleteItem(listId: string, itemId: string) {
-      const list = this.getList(listId)
+    async deleteItem(listId: string, itemId: string) {
+      const list = this.getList(listId);
 
-      if (!list) return
+      if (!list) return;
 
-      list.items = list.items.filter((item) => item.id !== itemId)
+      list.items = list.items.filter((item) => item.id !== itemId);
 
-      listsTable.replace(list)
+      try {
+        const res = await listsTable.replace(list);
+        console.log("delete item res", res);
+      } catch (e) {
+        console.log("error deleting item", e);
+      }
     },
   },
   getters: {
+    getPrimaryListId: (state): string | null => {
+      if (!state.lists || state.lists.length === 0) return null;
+
+      const primaryList = state.lists.find((list) => list.isPrimary);
+
+      if (!primaryList) return null;
+
+      return primaryList.id;
+    },
     getList: (state): ((listId: string) => List | null) => {
       return (listId: string) => {
-        if (!state.lists) return null
+        if (!state.lists) return null;
 
-        const list = state.lists.find((list) => list.id === listId)
+        const list = state.lists.find((list) => list.id === listId);
 
         if (!list) {
-          console.log('List not found.')
-          return null
+          console.log("List not found.");
+          return null;
         }
 
-        return list
-      }
+        return list;
+      };
     },
     getItem: (state): ((listId: string, itemId: string) => ListItem | null) => {
       return (listId: string, itemId: string) => {
         // @ts-ignore - getter does exist
-        const list = state.getList(listId) as List | null
+        const list = state.getList(listId) as List | null;
 
-        if (!list) return null
+        if (!list) return null;
 
-        const item = list.items.find((item) => item.id === itemId)
+        const item = list.items.find((item) => item.id === itemId);
 
         if (!item) {
-          console.log('Item not found.')
-          return null
+          console.log("Item not found.");
+          return null;
         }
 
-        return item
-      }
+        return item;
+      };
     },
     getCheckedItems: (state): ((listId: string) => ListItem[]) => {
       return (listId: string) => {
         // @ts-ignore - getter does exist
-        const list = state.getList(listId) as List | null
+        const list = state.getList(listId) as List | null;
 
-        if (!list) return []
+        if (!list) return [];
 
-        const items = list.items.filter((item) => item.checked)
+        const items = list.items.filter((item) => item.checked);
 
-        items.reverse()
+        items.reverse();
 
-        return items
-      }
+        return items;
+      };
     },
     getUncheckedItems: (state): ((listId: string) => ListItem[]) => {
       return (listId: string) => {
         // @ts-ignore - getter does exist
-        const list = state.getList(listId) as List | null
+        const list = state.getList(listId) as List | null;
 
-        if (!list) return []
+        if (!list) return [];
 
-        const items = list.items.filter((item) => !item.checked)
+        const items = list.items.filter((item) => !item.checked);
 
-        items.reverse()
+        items.reverse();
 
-        return items
-      }
+        return items;
+      };
     },
   },
-})
+});

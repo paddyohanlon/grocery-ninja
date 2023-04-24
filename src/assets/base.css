@@ -6,6 +6,7 @@
 
   --color-green: #00bd7e;
   --color-green-hover: #07a570;
+  --color-orange: orange;
   --color-red: #c73f3f;
   --color-black: #111;
   --color-white: #fff;
@@ -13,6 +14,8 @@
   --color-link-hover: hsla(160, 100%, 37%, 0.2);
 
   --header-height: 48px;
+
+  --border-radius: 5px;
 }
 
 *,

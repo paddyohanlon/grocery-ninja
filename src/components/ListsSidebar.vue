@@ -1,32 +1,32 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { LIST } from '@/router/route-names'
-import { useListsStore } from '@/stores/lists'
-import { storeToRefs } from 'pinia'
+import { ref, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { LIST } from "@/router/route-names";
+import { useListsStore } from "@/stores/lists";
+import { storeToRefs } from "pinia";
 
-const store = useListsStore()
+const store = useListsStore();
 
-const { lists } = storeToRefs(store)
+const { lists } = storeToRefs(store);
 
-const router = useRouter()
-const route = useRoute()
+const router = useRouter();
+const route = useRoute();
 
-const listIdParam = ref(route.params.listId as string)
+const listIdParam = ref(route.params.listId as string);
 
 watch(
   () => route.params.listId,
   (newId) => {
-    listIdParam.value = newId as string
+    listIdParam.value = newId as string;
   },
-)
+);
 
-const name = ref('')
+const name = ref("");
 
 async function createAndGoToList() {
-  const listId = await store.createList(name.value)
-  name.value = ''
-  router.push({ name: LIST, params: { listId } })
+  const listId = await store.createList(name.value);
+  name.value = "";
+  router.push({ name: LIST, params: { listId } });
 }
 </script>
 
@@ -34,17 +34,12 @@ async function createAndGoToList() {
   <nav aria-label="Lists" class="list-nav">
     <ul v-if="lists && lists.length > 0" class="list-reset">
       <li v-for="list in lists" :key="list.id">
-        <RouterLink
-          :class="{ 'is-active': listIdParam === list.id }"
-          :to="{ name: LIST, params: { listId: list.id } }"
-          ><span>{{ list.name }}</span>
-          <img
-            v-if="list.isPrimary"
-            alt="Primary list icon"
-            src="@/assets/house.svg"
-            width="16"
-            height="16"
-          />
+        <RouterLink :class="{ 'is-active': listIdParam === list.id }" :to="{ name: LIST, params: { listId: list.id } }"
+          ><span>{{ list.name }} </span>
+          <span class="item-info">
+            <img v-if="list.isPrimary" alt="Primary list icon" src="@/assets/house.svg" width="16" height="16" />
+            <span v-if="list.items.length">{{ list.items.length }}</span>
+          </span>
         </RouterLink>
       </li>
     </ul>
@@ -87,6 +82,12 @@ async function createAndGoToList() {
 }
 .list-nav a.is-active {
   background: #000;
+}
+
+.item-info {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .create-list-form {
