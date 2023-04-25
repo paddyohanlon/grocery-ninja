@@ -147,6 +147,7 @@ function updateList() {
 
           <form @submit.prevent="addItem()" class="create-item-form">
             <label>
+              <span class="screen-reader-text">Add an item</span>
               <input
                 v-model="newItemName"
                 type="text"

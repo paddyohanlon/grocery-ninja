@@ -4,6 +4,7 @@ import { RouterLink, RouterView } from "vue-router";
 import { rid } from "@/rethinkid";
 import { useAuthStore } from "@/stores/auth";
 import { useListsStore } from "@/stores/lists";
+import { useNotificationsStore } from "@/stores/notifications";
 import { useRouter, useRoute } from "vue-router";
 import { HOME, CONTACTS, LIST } from "@/router/route-names";
 
@@ -17,6 +18,7 @@ const accountDropdownIsVisible = ref(false);
 
 const authStore = useAuthStore();
 const listsStore = useListsStore();
+const notificationsStore = useNotificationsStore();
 
 function onLogin() {
   authStore.setLoggedIn(true);
@@ -111,6 +113,18 @@ function toggleAccountDropdown() {
 
     <div class="loading" v-if="loading">Loading...</div>
     <template v-else><RouterView /></template>
+
+    <div
+      class="notifications"
+      :class="{ 'visually-hidden': notificationsStore.notifications.length === 0 }"
+      role="alert"
+    >
+      <ul v-if="notificationsStore.notifications.length > 0" class="notifications-list list-reset">
+        <li v-for="(notification, index) of notificationsStore.notifications" :key="index">
+          {{ notification }}
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
