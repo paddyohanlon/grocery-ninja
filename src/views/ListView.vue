@@ -105,7 +105,6 @@ function updateList() {
               <button class="screen-reader-text">Update</button>
             </form>
 
-            <!-- <div v-if="store.lists && store.lists.length > 1" class="list-actions"> -->
             <div class="list-actions">
               <button
                 @click="toggleListDropdown"
@@ -248,29 +247,6 @@ function updateList() {
   top: -5px;
   position: absolute;
   left: 0;
-}
-
-.create-item-form {
-  margin-bottom: 1rem;
-}
-
-.item-name-input {
-  background: var(--color-black);
-  border-radius: var(--border-radius) var(--border-radius) 0 0;
-  width: 100%;
-}
-
-.create-item-actions {
-  display: flex;
-  justify-content: flex-end;
-
-  background: #000;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-  padding: 10px;
-}
-
-.create-item-button {
-  border-radius: 0 0 3px 0;
 }
 
 .disclose-triangle {
