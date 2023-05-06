@@ -85,6 +85,33 @@ a,
   text-decoration: none;
 }
 
+select {
+  /* A reset of styles, including removing the default dropdown arrow */
+  appearance: none;
+  /* Additional resets for further consistency */
+  background-color: transparent;
+  border: none;
+  padding: 0 1em 0 0;
+  margin: 0;
+  width: 100%;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: inherit;
+  line-height: inherit;
+}
+
+.select-input {
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius);
+  color: var(--color-white);
+  cursor: pointer;
+  font-family: sans-serif;
+  font-size: 1rem;
+  line-height: 1.1;
+  padding: 14px 15px;
+}
+
 .text-input {
   background: transparent;
   border: 1px solid transparent;
@@ -97,6 +124,13 @@ a,
 }
 .text-input:focus {
   outline: none;
+}
+
+.input-has-border {
+  border: 1px solid var(--color-black);
+}
+.input-has-border-light {
+  border: 1px solid var(--color-text);
 }
 
 .create-item-form {
@@ -191,3 +225,30 @@ a,
   transform: translateX(-50%);
   z-index: 1000;
 }
+
+/* Contacts and Invitations views */
+.contacts-header {
+  padding: 1rem;
+}
+.contacts-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr 1fr;
+  padding: 1rem;
+}
+
+.contacts-list > li {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.button-list {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+}
+/* End Contacts and Invitations views */

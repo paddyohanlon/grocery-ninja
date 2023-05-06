@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { useListsStore } from "@/stores/lists";
+import { useUserStore } from "@/stores/user.js";
 import { useRoute, useRouter } from "vue-router";
-import { HOME, LIST_ITEM } from "@/router/route-names";
+import { HOME, INVITATIONS, LIST_ITEM } from "@/router/route-names";
 import ListsSidebar from "@/components/ListsSidebar.vue";
 import CheckItemButton from "@/components/CheckItemButton.vue";
 import { STATE_CHANGE_DURATION_MS } from "@/timing";
+import type { List } from "@/types";
 
-const store = useListsStore();
+const listsStore = useListsStore();
+const userStore = useUserStore();
 
 const route = useRoute();
 const router = useRouter();
@@ -22,15 +25,23 @@ const listDropdownIsVisible = ref(false);
 const listIdParam = ref(route.params.listId as string);
 const itemIdParam = ref(route.params.itemId as string);
 
-const list = ref(store.getList(listIdParam.value));
+const list = ref(listsStore.getList(listIdParam.value));
+
 const newList = ref(Object.assign({}, list.value));
+
+watch(
+  () => listsStore.getList(listIdParam.value),
+  (updatedList) => {
+    newList.value = Object.assign({}, updatedList);
+  },
+);
 
 watch(
   () => route.params.listId,
   (newId) => {
     listDropdownIsVisible.value = false;
     listIdParam.value = newId as string;
-    list.value = store.getList(listIdParam.value);
+    list.value = listsStore.getList(listIdParam.value);
 
     if (!list.value) return;
     newList.value = Object.assign({}, list.value);
@@ -46,7 +57,7 @@ watch(
 );
 
 function addItem() {
-  store.addItem(listIdParam.value, newItemName.value);
+  listsStore.addItem(listIdParam.value, newItemName.value);
   newItemName.value = "";
 }
 
@@ -62,12 +73,12 @@ function deleteList() {
   if (window.confirm("Are you sure you want to delete this list?")) {
     if (!list.value) return;
 
-    store.deleteList(list.value);
+    listsStore.deleteList(list.value);
     router.push({ name: HOME });
   }
 }
 
-function updateList() {
+function submitUpdateList() {
   if (!list.value) return;
 
   list.value = Object.assign(list.value, newList.value);
@@ -75,7 +86,7 @@ function updateList() {
   updatingList.value = true;
   setTimeout(() => (updatingList.value = false), STATE_CHANGE_DURATION_MS);
 
-  store.updateList(list.value);
+  listsStore.updateList(list.value);
 }
 </script>
 
@@ -89,21 +100,26 @@ function updateList() {
         <template v-if="!list || !newList">List not found.</template>
         <template v-else>
           <header class="list-header">
-            <form class="list-name-form" @submit.prevent="updateList()">
-              <label class="form-control-label screen-reader-text" for="new-name">List Name</label>
-              <input
-                id="new-name"
-                v-model="newList.name"
-                class="text-input list-title"
-                type="text"
-                placeholder="List name"
-                maxlength="255"
-                autocomplete="off"
-                required
-              />
-              <span v-if="updatingList" class="saved-notice" aria-hidden="true">Saved!</span>
-              <button class="screen-reader-text">Update</button>
-            </form>
+            <div>
+              <form class="list-name-form" @submit.prevent="submitUpdateList()">
+                <label class="form-control-label screen-reader-text" for="new-name">List Name</label>
+                <input
+                  id="new-name"
+                  v-model="newList.name"
+                  class="text-input list-title"
+                  type="text"
+                  placeholder="List name"
+                  maxlength="255"
+                  autocomplete="off"
+                  required
+                />
+                <span v-if="updatingList" class="saved-notice" aria-hidden="true">Saved!</span>
+                <button class="screen-reader-text">Update</button>
+              </form>
+              <div v-if="list.hostId !== userStore.userId" class="shared-by">
+                Shared by <strong>{{ listsStore.getSharerUsername(list.hostId) }}</strong>
+              </div>
+            </div>
 
             <div class="list-actions">
               <button
@@ -123,18 +139,38 @@ function updateList() {
                 aria-labelledby="toggle-list-dropdown-button"
               >
                 <ul class="list-dropdown-list list-reset">
-                  <li>
-                    <button
-                      v-if="!list.isPrimary"
-                      @click="
-                        //@ts-ignore
-                        store.makeListPrimary(list.id)
-                      "
-                      class="link-button"
-                    >
-                      Make list primary
-                    </button>
-                    <template v-else>This is your primary list.</template>
+                  <li v-if="list.hostId === userStore.userId">
+                    <ul class="list-dropdown-sub-list list-reset">
+                      <li>
+                        <RouterLink class="button" :to="{ name: INVITATIONS, query: { listId: list.id } }"
+                          >Share List</RouterLink
+                        >
+                      </li>
+                      <li>
+                        <button
+                          v-if="list.id !== userStore.primaryListId"
+                          @click="
+                            //@ts-ignore
+                            userStore.updatePrimaryListId(list.id)
+                          "
+                          class="button"
+                        >
+                          Make list primary
+                        </button>
+                        <div v-else>
+                          <span class="button button-orange button-disabled">This is your primary list</span>
+                        </div>
+                      </li>
+                    </ul>
+                  </li>
+                  <li v-if="list.userIDsWithAccess.length > 0">
+                    <h3>User IDs with Access</h3>
+                    <ul class="list-reset">
+                      <li v-for="(userIdWithAccess, index) of list.userIDsWithAccess" :key="index">
+                        <strong v-if="userIdWithAccess === userStore.userId">(me) </strong>
+                        {{ userIdWithAccess }}
+                      </li>
+                    </ul>
                   </li>
                   <div class="danger-zone">
                     <button class="button button-danger" @click="deleteList()">Delete List</button>
@@ -162,7 +198,7 @@ function updateList() {
 
           <ul class="list-reset">
             <li
-              v-for="item in store.getUncheckedItems(listIdParam)"
+              v-for="item in listsStore.getUncheckedItems(listIdParam)"
               :key="item.id"
               :class="{ 'is-active': itemIdParam === item.id }"
               class="item"
@@ -174,7 +210,7 @@ function updateList() {
             </li>
           </ul>
 
-          <template v-if="store.getCheckedItems(listIdParam).length > 0">
+          <template v-if="listsStore.getCheckedItems(listIdParam).length > 0">
             <h3 class="checked-title">
               <button
                 @click="toggleCheckedList"
@@ -184,7 +220,7 @@ function updateList() {
                 :aria-expanded="checkedListIsVisible"
               >
                 <span :class="{ 'is-open': checkedListIsVisible }" class="disclose-triangle">&rsaquo;</span>
-                <span><span class="is-bold">Checked</span> {{ store.getCheckedItems(listIdParam).length }}</span>
+                <span><span class="is-bold">Checked</span> {{ listsStore.getCheckedItems(listIdParam).length }}</span>
               </button>
             </h3>
 
@@ -195,7 +231,7 @@ function updateList() {
               aria-labelledby="toggle-checked-button"
             >
               <li
-                v-for="item in store.getCheckedItems(listIdParam)"
+                v-for="item in listsStore.getCheckedItems(listIdParam)"
                 :key="item.id"
                 :class="{ 'is-active': itemIdParam === item.id }"
                 class="item"
@@ -318,5 +354,15 @@ function updateList() {
 }
 .list-dropdown-list li:last-child {
   margin-bottom: 0;
+}
+
+.list-dropdown-sub-list li {
+  margin-bottom: 0.5rem;
+}
+
+.shared-by {
+  font-style: italic;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
 }
 </style>

@@ -3,11 +3,13 @@ import { ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { LIST } from "@/router/route-names";
 import { useListsStore } from "@/stores/lists";
+import { useUserStore } from "@/stores/user.js";
 import { storeToRefs } from "pinia";
 
-const store = useListsStore();
+const listsStore = useListsStore();
+const userStore = useUserStore();
 
-const { lists } = storeToRefs(store);
+const { lists } = storeToRefs(listsStore);
 
 const router = useRouter();
 const route = useRoute();
@@ -24,7 +26,7 @@ watch(
 const name = ref("");
 
 async function createAndGoToList() {
-  const listId = await store.createList(name.value);
+  const listId = await listsStore.createList(name.value);
   name.value = "";
   router.push({ name: LIST, params: { listId } });
 }
@@ -37,7 +39,20 @@ async function createAndGoToList() {
         <RouterLink :class="{ 'is-active': listIdParam === list.id }" :to="{ name: LIST, params: { listId: list.id } }"
           ><span>{{ list.name }} </span>
           <span class="item-info">
-            <img v-if="list.isPrimary" alt="Primary list icon" src="@/assets/house.svg" width="16" height="16" />
+            <img
+              v-if="userStore.userId && userStore.userId !== list.hostId"
+              alt="Shared list icon"
+              src="@/assets/share.svg"
+              width="16"
+              height="16"
+            />
+            <img
+              v-if="list.id === userStore.primaryListId"
+              alt="Primary list icon"
+              src="@/assets/house.svg"
+              width="16"
+              height="16"
+            />
             <span v-if="list.items.length">{{ list.items.length }}</span>
           </span>
         </RouterLink>
@@ -108,5 +123,9 @@ async function createAndGoToList() {
 
 .plus-icon {
   font-size: 2rem;
+}
+
+.shared-lists-title {
+  padding: 20px 15px 10px 15px;
 }
 </style>

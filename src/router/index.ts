@@ -1,9 +1,12 @@
 import { createRouter, createWebHistory } from "vue-router";
 import HomeView from "../views/HomeView.vue";
+import SettingsView from "../views/SettingsView.vue";
 import ContactsView from "../views/ContactsView.vue";
+import InvitationsView from "../views/InvitationsView.vue";
 import ListView from "../views/ListView.vue";
 import ListItemView from "../views/ListItemView.vue";
-import { HOME, CONTACTS, LIST, LIST_ITEM } from "@/router/route-names";
+import PageNotFoundView from "../views/PageNotFoundView.vue";
+import { HOME, SETTINGS, CONTACTS, LIST, LIST_ITEM, INVITATIONS, PAGE_NOT_FOUND } from "@/router/route-names";
 import { rid } from "@/rethinkid";
 
 const router = createRouter({
@@ -16,9 +19,19 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
+      path: "/settings",
+      name: SETTINGS,
+      component: SettingsView,
+    },
+    {
       path: "/contacts",
       name: CONTACTS,
       component: ContactsView,
+    },
+    {
+      path: "/invitations",
+      name: INVITATIONS,
+      component: InvitationsView,
     },
     {
       path: "/lists/:listId",
@@ -31,6 +44,11 @@ const router = createRouter({
           component: ListItemView,
         },
       ],
+    },
+    {
+      path: "/:pathMatch(.*)*",
+      name: PAGE_NOT_FOUND,
+      component: PageNotFoundView,
     },
   ],
 });

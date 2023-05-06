@@ -1,47 +1,87 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { RouterLink, RouterView } from "vue-router";
-import { rid } from "@/rethinkid";
-import { useAuthStore } from "@/stores/auth";
+import { listsTable, rid } from "@/rethinkid";
+import { useUserStore } from "@/stores/user.js";
 import { useListsStore } from "@/stores/lists";
 import { useNotificationsStore } from "@/stores/notifications";
 import { useRouter, useRoute } from "vue-router";
-import { HOME, CONTACTS, LIST } from "@/router/route-names";
+import { HOME, CONTACTS, LIST, INVITATIONS, SETTINGS } from "@/router/route-names";
+import type { List } from "@/types";
 
 const router = useRouter();
 const route = useRoute();
 
 const loading = ref(true);
-const userId = ref("");
 
 const accountDropdownIsVisible = ref(false);
 
-const authStore = useAuthStore();
+const userStore = useUserStore();
 const listsStore = useListsStore();
 const notificationsStore = useNotificationsStore();
 
-function onLogin() {
-  authStore.setLoggedIn(true);
+async function onLogin() {
+  console.log("logged in!");
+  userStore.setLoggedIn(true);
 
-  rid.users.getInfo().then((response) => {
-    userId.value = response.id;
-  });
+  await userStore.setUserId();
+  await userStore.fetchSettings();
 
-  listsStore.fetchLists().then(() => {
+  if (!userStore.username) {
+    router.push({ name: SETTINGS });
+  }
+
+  listsStore.fetchLists().then(async () => {
+    await listsStore.fetchContentSharedWithMe();
+
+    // Subscribe to my lists table changes
+    console.log("do subscribe");
+    listsTable.subscribe({}, (changes) => {
+      //  added
+      if (changes.new_val && changes.old_val === null) {
+        console.log("Added", changes.new_val);
+      }
+      // deleted
+      if (changes.new_val === null && changes.old_val) {
+        console.log("One of my lists was deleted", changes.old_val);
+        const deletedList = changes.old_val as List;
+
+        // Remove list from local state
+        if (!listsStore.lists) return;
+
+        listsStore.lists = listsStore.lists.filter((list) => list.id !== deletedList.id);
+      }
+      // updated
+      if (changes.new_val && changes.old_val) {
+        console.log("Updated", changes.new_val);
+        const updatedList = changes.new_val as List;
+
+        if (!listsStore.lists) return;
+
+        listsStore.lists = listsStore.lists.map((list) => {
+          if (list.id === updatedList.id) {
+            return updatedList;
+          }
+          return list;
+        });
+      }
+    });
+    // Subscribe to shared with me lists table changes
+
     if (listsStore.lists === null) return;
     loading.value = false;
 
     // Redirect the home route to the primary list
     if (route.name !== HOME) return;
 
-    const primaryListId = listsStore.getPrimaryListId;
+    const primaryListId = userStore.primaryListId;
     if (!primaryListId) return;
     router.push({ name: LIST, params: { listId: primaryListId } });
   });
 }
 
-function goToContacts() {
-  router.push({ name: CONTACTS });
+function goToFromAccountDropdown(routeName: string) {
+  router.push({ name: routeName });
   accountDropdownIsVisible.value = false;
 }
 
@@ -69,11 +109,12 @@ function toggleAccountDropdown() {
         </RouterLink>
 
         <div class="header-region-right">
-          <template v-if="!authStore.loggedIn">
+          <template v-if="!userStore.loggedIn">
             <button @click="rid.login()" class="header-button link-button">Get Started</button>
             <button @click="rid.login()" class="header-button link-button">Sign In</button>
           </template>
           <template v-else>
+            <div class="header-text-item">{{ userStore.username }}</div>
             <button
               @click="toggleAccountDropdown"
               class="header-button link-button"
@@ -101,8 +142,10 @@ function toggleAccountDropdown() {
               aria-labelledby="toggle-account-button"
             >
               <ul class="account-dropdown-list list-reset">
-                <li>My ID: {{ userId }}</li>
-                <li><button @click="goToContacts()" class="link-button">Contacts</button></li>
+                <li>My ID: {{ userStore.userId }}</li>
+                <li><button @click="goToFromAccountDropdown(CONTACTS)" class="link-button">Contacts</button></li>
+                <li><button @click="goToFromAccountDropdown(INVITATIONS)" class="link-button">Invitations</button></li>
+                <li><button @click="goToFromAccountDropdown(SETTINGS)" class="link-button">Settings</button></li>
                 <li><button @click="rid.logOut()" class="link-button">Sign out</button></li>
               </ul>
             </div>
@@ -196,5 +239,13 @@ function toggleAccountDropdown() {
 }
 .account-dropdown-list a:hover {
   background: transparent;
+}
+
+.has-transparent-background {
+  background: transparent;
+}
+
+.header-text-item {
+  padding: 0 12px;
 }
 </style>

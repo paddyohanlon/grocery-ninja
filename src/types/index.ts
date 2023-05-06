@@ -3,7 +3,13 @@ export interface List {
   name: string;
   items: ListItem[];
   archived: boolean;
-  isPrimary: boolean;
+  userIDsWithAccess: string[];
+  hostId: string;
+}
+
+export interface ContentSharer {
+  id: string; // host user ID
+  username: string;
 }
 
 export type NewList = Omit<List, "id">;

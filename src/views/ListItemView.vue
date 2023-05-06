@@ -5,8 +5,9 @@ import { LIST } from "@/router/route-names";
 import { useListsStore } from "@/stores/lists";
 import CheckItemButton from "@/components/CheckItemButton.vue";
 import { STATE_CHANGE_DURATION_MS } from "@/timing";
+import type { ListItem } from "@/types";
 
-const store = useListsStore();
+const listsStore = useListsStore();
 
 const route = useRoute();
 const router = useRouter();
@@ -14,7 +15,7 @@ const router = useRouter();
 const listIdParam = ref(route.params.listId as string);
 const itemIdParam = ref(route.params.itemId as string);
 
-const item = ref(store.getItem(listIdParam.value, itemIdParam.value));
+const item = ref(listsStore.getItem(listIdParam.value, itemIdParam.value));
 const newItem = ref(Object.assign({}, item.value));
 
 const sidebarRightIsVisible = ref(false);
@@ -25,12 +26,19 @@ const updateButtonTextUpdating = "Updating...";
 const updateButtonText = ref(updateButtonTextInitial);
 
 watch(
+  () => listsStore.getItem(listIdParam.value, itemIdParam.value),
+  (updatedItem) => {
+    newItem.value = Object.assign({}, updatedItem);
+  },
+);
+
+watch(
   () => route.params.itemId,
   (newId) => {
     itemIdParam.value = newId as string;
     if (itemIdParam.value) {
       sidebarRightIsVisible.value = true;
-      item.value = store.getItem(listIdParam.value, itemIdParam.value);
+      item.value = listsStore.getItem(listIdParam.value, itemIdParam.value);
 
       if (!item.value) return;
       newItem.value = Object.assign({}, item.value);
@@ -55,12 +63,12 @@ function updateItem() {
   updateButtonText.value = updateButtonTextUpdating;
   setTimeout(() => (updateButtonText.value = updateButtonTextInitial), STATE_CHANGE_DURATION_MS);
 
-  store.updateItem(listIdParam.value, item.value);
+  listsStore.updateItem(listIdParam.value, item.value);
 }
 
 function deleteItem() {
   if (window.confirm("Are you sure you want to delete this item?")) {
-    store.deleteItem(listIdParam.value, itemIdParam.value);
+    listsStore.deleteItem(listIdParam.value, itemIdParam.value);
     closeItem();
   }
 }
@@ -86,7 +94,7 @@ function deleteItem() {
               <input
                 id="new-name"
                 v-model="newItem.name"
-                class="is-full-width"
+                class="text-input is-full-width"
                 type="text"
                 placeholder="Item name"
                 maxlength="255"
@@ -100,7 +108,7 @@ function deleteItem() {
               <input
                 id="new-price"
                 v-model="newItem.price"
-                class="item-input is-full-width"
+                class="text-input input-has-border is-full-width"
                 type="number"
                 autocomplete="off"
                 step="0.01"
@@ -112,7 +120,7 @@ function deleteItem() {
               <input
                 id="new-quantity"
                 v-model="newItem.quantity"
-                class="item-input is-full-width"
+                class="text-input input-has-border is-full-width"
                 type="number"
                 autocomplete="off"
                 step="0.01"
@@ -124,7 +132,7 @@ function deleteItem() {
               <input
                 id="new-vendor"
                 v-model="newItem.vendor"
-                class="item-input is-full-width"
+                class="text-input input-has-border is-full-width"
                 type="text"
                 autocomplete="off"
               />
@@ -132,7 +140,11 @@ function deleteItem() {
 
             <div class="form-control">
               <label class="form-control-label" for="new-notes">Notes</label>
-              <textarea id="new-notes" v-model="newItem.notes" class="item-input is-full-width"></textarea>
+              <textarea
+                id="new-notes"
+                v-model="newItem.notes"
+                class="text-input input-has-border is-full-width"
+              ></textarea>
             </div>
 
             <button class="button">{{ updateButtonText }}</button>
@@ -190,10 +202,5 @@ function deleteItem() {
   align-items: center;
 
   margin-bottom: 1rem;
-}
-
-.item-input {
-  border: 1px solid var(--color-black);
-  border-radius: var(--border-radius);
 }
 </style>

@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import { rid } from "@/rethinkid";
-import { useAuthStore } from "@/stores/auth";
-import { useListsStore } from "@/stores/lists";
+import { useUserStore } from "@/stores/user.js";
 import { useRouter } from "vue-router";
 import { LIST } from "@/router/route-names";
 
-const authStore = useAuthStore();
-const listsStore = useListsStore();
+const userStore = useUserStore();
 
 const router = useRouter();
 
-if (authStore.loggedIn) {
-  const primaryListId = listsStore.getPrimaryListId;
+if (userStore.loggedIn) {
+  const primaryListId = userStore.primaryListId;
   if (primaryListId) {
     router.push({ name: LIST, params: { listId: primaryListId } });
   }
@@ -19,7 +17,7 @@ if (authStore.loggedIn) {
 </script>
 
 <template>
-  <div class="welcome-view" v-if="!authStore.loggedIn">
+  <div class="welcome-view" v-if="!userStore.loggedIn">
     <img alt="Logo" class="logo" src="@/assets/logo.svg" width="50" height="50" />
     <h1>Grocery Ninja</h1>
     <p>Never forget an item.</p>

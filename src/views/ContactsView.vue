@@ -40,7 +40,7 @@ fetchContacts();
 const sentConnectionRequests: Ref<SentConnectionRequest[]> = ref([]);
 
 // Need to manage these in app, RethinkID doesn't provide a way to get them
-const sentConnectionRequestsTable = rid.table("sentConnectionRequests");
+const sentConnectionRequestsTable = rid.table("sent_connection_requests");
 
 // Fetch sent connection requests
 sentConnectionRequestsTable.read().then((requests) => {
@@ -120,14 +120,13 @@ async function removeContact(contactId: string) {
 async function disconnect(contactId: string) {
   // Disconnect contact in database
   try {
-    // Successful even if contact doesn't exist
     await rid.contacts.disconnect(contactId);
 
     // Disconnect contact in local state
     const index = contacts.value.findIndex((contact) => contact.contactId === contactId);
     contacts.value[index].connected = false;
-  } catch (e) {
-    console.log("contact disconnect error: ", e);
+  } catch (e: any) {
+    notificationsStore.addNotification(e.message);
   }
 }
 
@@ -282,7 +281,9 @@ onUnmounted(() => {
               <button v-if="contact.connected" @click="disconnect(contact.contactId)" class="button button-danger">
                 Unfriend
               </button>
-              <span v-else-if="isConnectionRequestSent(contact.contactId)" class="button button-orange button-disabled"
+              <span
+                v-else-if="isConnectionRequestSent(contact.contactId)"
+                class="button button-orange button-disabled button-disabled"
                 >Connection Request Sent</span
               >
               <button v-else class="button" @click="connectRequestOrAccept(contact.contactId)">Connect</button>
@@ -326,29 +327,4 @@ onUnmounted(() => {
   </div>
 </template>
 
-<style scoped>
-.contacts-header {
-  padding: 1rem;
-}
-.contacts-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: 1fr 1fr;
-  padding: 1rem;
-}
-
-.contacts-list li {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.button-list {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  justify-content: center;
-}
-</style>
+<style scoped></style>

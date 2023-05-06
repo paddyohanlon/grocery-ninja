@@ -1,14 +1,115 @@
 import { defineStore } from "pinia";
-import type { List, NewList, ListItem, OrderTableDoc } from "@/types";
-import { listsTable, orderTable, LISTS_TABLE_NAME } from "@/rethinkid";
+import { useUserStore } from "@/stores/user";
+import type { List, NewList, ListItem, OrderTableDoc, ContentSharer } from "@/types";
+import {
+  listsTable,
+  orderTable,
+  LISTS_TABLE_NAME,
+  contentSharersTable,
+  SETTINGS_TABLE_NAME,
+  SETTING_USERNAME,
+} from "@/rethinkid";
+import type { TableAPI } from "@rethinkid/rethinkid-js-sdk";
 import { v4 as uuidv4 } from "uuid";
+import { rid, getOwnedOrSharedListsTable } from "@/rethinkid";
 
 export const useListsStore = defineStore("lists", {
   state: () => ({
     lists: null as List[] | null,
     listsOrder: [] as string[], // list IDs
+    contentSharers: null as ContentSharer[] | null,
   }),
   actions: {
+    async addContentSharer(hostId: string): Promise<void> {
+      const contentSharer: ContentSharer = { id: hostId, username: "" };
+
+      console.log("contentSharer", contentSharer);
+
+      // ID might already exist which is fine
+      await contentSharersTable.insert(contentSharer);
+
+      if (!this.contentSharers) this.contentSharers = [];
+      if (this.contentSharers.some((sharer) => sharer.id === contentSharer.id)) return;
+      console.log("Add sharer to local state");
+      this.contentSharers.push(contentSharer);
+    },
+    // Fetch lists and usernames shared with me
+    async fetchContentSharedWithMe(): Promise<void> {
+      if (!this.lists) this.lists = [];
+
+      try {
+        this.contentSharers = (await contentSharersTable.read()) as ContentSharer[];
+
+        console.log("this.contentSharers", this.contentSharers);
+
+        for (const sharer of this.contentSharers) {
+          const hostId = sharer.id;
+
+          try {
+            // Get content sharer username:
+            // Fetch from `username` row of `settings` table of hostId
+            const sharerSettingsTable = rid.table(SETTINGS_TABLE_NAME, { userId: hostId });
+            const usernameRow = (await sharerSettingsTable.read({ rowId: SETTING_USERNAME })) as {
+              id: string;
+              value: string;
+            };
+            console.log("usernameRow.value", usernameRow.value);
+            sharer.username = usernameRow.value;
+
+            // Save to contentSharers local state
+          } catch (e: any) {
+            console.log("sharer username error", e.message);
+          }
+
+          // Get shared lists
+          const sharedListsTable = rid.table(LISTS_TABLE_NAME, { userId: hostId }) as TableAPI;
+
+          const sharedLists = (await sharedListsTable.read()) as List[];
+
+          if (!sharedLists || (sharedLists && sharedLists.length === 0)) return;
+
+          for (const list of sharedLists) {
+            this.lists.push(list);
+          }
+
+          // Subscribe
+          sharedListsTable.subscribe({}, (changes) => {
+            console.log("Subscribe changers for host ID:", hostId);
+
+            //  added
+            if (changes.new_val && changes.old_val === null) {
+              console.log("Added", changes.new_val);
+            }
+            // deleted
+            if (changes.new_val === null && changes.old_val) {
+              console.log("A list shared with me was deleted", changes.old_val);
+              const deletedList = changes.old_val as List;
+
+              // Remove list from local state
+              if (!this.lists) return;
+
+              this.lists = this.lists.filter((list) => list.id !== deletedList.id);
+            }
+            // updated
+            if (changes.new_val && changes.old_val) {
+              console.log("Updated", changes.new_val);
+              const updatedList = changes.new_val as List;
+
+              if (!this.lists) return;
+
+              this.lists = this.lists.map((list) => {
+                if (list.id === updatedList.id) {
+                  return updatedList;
+                }
+                return list;
+              });
+            }
+          });
+        }
+      } catch (e) {
+        console.log("fetchContentSharedWithMe error", e);
+      }
+    },
     async fetchLists(): Promise<void> {
       let lists = [] as List[];
       try {
@@ -41,23 +142,30 @@ export const useListsStore = defineStore("lists", {
       const orderedLists = listsOrderDoc.order.map((id) => {
         const foundList = lists.find((list) => {
           return list.id === id;
-        })
+        });
         return foundList;
       }) as List[];
 
       this.lists = orderedLists;
     },
     async createList(name: string): Promise<string> {
+      const userStore = useUserStore();
+
       const newList: NewList = {
         name,
         items: [],
         archived: false,
-        isPrimary: !this.lists || (this.lists && this.lists.length === 0),
+        userIDsWithAccess: [],
+        hostId: userStore.userId,
       };
 
       const id = await listsTable.insert(newList);
 
       const firstId = id[0];
+
+      if (!this.lists || (this.lists && this.lists.length === 0)) {
+        await userStore.updatePrimaryListId(firstId);
+      }
 
       this.listsOrder.push(firstId);
       const orderDoc: OrderTableDoc = { id: LISTS_TABLE_NAME, order: this.listsOrder };
@@ -77,74 +185,51 @@ export const useListsStore = defineStore("lists", {
     async updateList(updatedList: List): Promise<void> {
       if (!this.lists) return;
 
-      await listsTable.update(updatedList);
-
       this.lists = this.lists.map((list) => {
         if (list.id === updatedList.id) {
           return updatedList;
         }
         return list;
       });
+
+      const listsTable = await getOwnedOrSharedListsTable(updatedList);
+      listsTable.update(updatedList);
     },
-    async deleteList({ id, isPrimary }: List): Promise<void> {
+    async deleteList(deletedList: List): Promise<void> {
       if (!this.lists) return;
 
-      listsTable.delete({ rowId: id });
-
       this.lists = this.lists.filter((list) => {
-        return list.id !== id;
+        return list.id !== deletedList.id;
       });
 
-      console.log("this.lists after filter", this.lists);
+      const listsTable = await getOwnedOrSharedListsTable(deletedList);
+      listsTable.delete({ rowId: deletedList.id });
 
-      listsTable.delete({ rowId: id });
-
-      const index = this.listsOrder.indexOf(id);
-      console.log("this.listsOrder before", this.listsOrder);
-      console.log("index of list to delete", index);
+      const index = this.listsOrder.indexOf(deletedList.id);
       if (index > -1) {
-        console.log('splice');
         this.listsOrder.splice(index, 1);
       }
-      console.log("this.listsOrder after splice", this.listsOrder);
       const orderDoc: OrderTableDoc = { id: LISTS_TABLE_NAME, order: this.listsOrder };
 
-      console.log("orderDoc", orderDoc);
-      
       try {
-        const updateRes = await orderTable.replace(orderDoc);
-        console.log("updateRes", updateRes);
+        await orderTable.replace(orderDoc);
       } catch (e) {
         console.log("ordertable update e", e);
       }
 
-      console.log("just updated order table, fetch to check");
-
       try {
-        const res = (await orderTable.read({ rowId: LISTS_TABLE_NAME })) as OrderTableDoc;
-        console.log("order table fetch res", res);
+        (await orderTable.read({ rowId: LISTS_TABLE_NAME })) as OrderTableDoc;
       } catch (e) {
         console.log("error reading order", e);
       }
 
-      // Set ait new primary list
-      if (isPrimary) {
-        this.makeListPrimary(this.listsOrder[0]);
+      // Set as new primary list
+      const userStore = useUserStore();
+      if (deletedList.id === userStore.primaryListId) {
+        userStore.updatePrimaryListId(this.listsOrder[0]);
       }
     },
-    makeListPrimary(newPrimaryListId: string): void {
-      if (!this.lists) return;
-
-      this.lists = this.lists.map((list) => {
-        list.isPrimary = list.id === newPrimaryListId;
-        return list;
-      });
-
-      for (const list of this.lists) {
-        listsTable.update(list);
-      }
-    },
-    addItem(listId: string, itemName: string): void {
+    async addItem(listId: string, itemName: string): Promise<void> {
       const list = this.getList(listId);
 
       if (!list) return;
@@ -161,9 +246,10 @@ export const useListsStore = defineStore("lists", {
 
       list.items.push(newItem);
 
+      const listsTable = await getOwnedOrSharedListsTable(list);
       listsTable.update(list);
     },
-    updateItem(listId: string, updatedItem: ListItem) {
+    async updateItem(listId: string, updatedItem: ListItem) {
       const list = this.getList(listId);
 
       if (!list) return;
@@ -175,6 +261,7 @@ export const useListsStore = defineStore("lists", {
         return item;
       });
 
+      const listsTable = await getOwnedOrSharedListsTable(list);
       listsTable.update(list);
     },
     async deleteItem(listId: string, itemId: string) {
@@ -185,22 +272,20 @@ export const useListsStore = defineStore("lists", {
       list.items = list.items.filter((item) => item.id !== itemId);
 
       try {
-        const res = await listsTable.replace(list);
-        console.log("delete item res", res);
+        const listsTable = await getOwnedOrSharedListsTable(list);
+        await listsTable.replace(list);
       } catch (e) {
         console.log("error deleting item", e);
       }
     },
   },
   getters: {
-    getPrimaryListId: (state): string | null => {
-      if (!state.lists || state.lists.length === 0) return null;
-
-      const primaryList = state.lists.find((list) => list.isPrimary);
-
-      if (!primaryList) return null;
-
-      return primaryList.id;
+    // Use user ID if username not available
+    getSharerUsername: (state): ((userId: string) => string) => {
+      return (userId: string) => {
+        const sharer = state.contentSharers?.find((sharer) => sharer.id === userId);
+        return sharer ? sharer.username : userId;
+      };
     },
     getList: (state): ((listId: string) => List | null) => {
       return (listId: string) => {
@@ -260,6 +345,13 @@ export const useListsStore = defineStore("lists", {
 
         return items;
       };
+    },
+    getMyLists: (state): List[] => {
+      if (!state.lists) return [];
+
+      const userStore = useUserStore();
+
+      return state.lists.filter((list) => list.hostId === userStore.userId);
     },
   },
 });
