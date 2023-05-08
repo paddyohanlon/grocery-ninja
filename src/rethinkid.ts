@@ -79,22 +79,25 @@ export const contentSharersTable = rid.table(CONTENT_SHARERS_TABLE_NAME);
 
 export const SETTING_USERNAME = "username";
 export const SETTING_PRIMARY_LIST_ID = "primaryListId";
+export const SETTING_AUTO_HANDLE_INVITATIONS = "autoHandleInvitations";
 
 export const settingsTable = rid.table(SETTINGS_TABLE_NAME, {
   onCreate: async () => {
     await rid.table(SETTINGS_TABLE_NAME).insert({ id: SETTING_USERNAME, value: "" });
     await rid.table(SETTINGS_TABLE_NAME).insert({ id: SETTING_PRIMARY_LIST_ID, value: "" });
+    await rid.table(SETTINGS_TABLE_NAME).insert({ id: SETTING_AUTO_HANDLE_INVITATIONS, value: true });
 
-    // await rid.permissions.set([
-    //   {
-    //     type: "read",
-    //     userId: "*",
-    //     tableName: SETTINGS_TABLE_NAME,
-    //     condition: {
-    //       matchUserId: "userIDsWithAccess",
-    //     },
-    //   },
-    // ]);
+    // give permissions to 'username' row to userId *
+    await rid.permissions.set([
+      {
+        type: "read",
+        userId: "*",
+        tableName: SETTINGS_TABLE_NAME,
+        condition: {
+          rowId: SETTING_USERNAME,
+        },
+      },
+    ]);
   },
 });
 

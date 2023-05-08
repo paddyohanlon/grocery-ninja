@@ -1,23 +1,45 @@
 <script setup lang="ts">
-import { rid, LISTS_TABLE_NAME, SETTINGS_TABLE_NAME, SETTING_USERNAME } from "@/rethinkid";
+import { rid } from "@/rethinkid";
 import { ref, onUnmounted, computed } from "vue";
 import type { Ref } from "vue";
-import type { AcceptedInvitation, Invitation, Permission, ReceivedInvitation } from "@rethinkid/rethinkid-js-sdk";
+import type {
+  Contact,
+  AcceptedInvitation,
+  Invitation,
+  Permission,
+  ReceivedInvitation,
+} from "@rethinkid/rethinkid-js-sdk";
 import { STATE_CHANGE_DURATION_MS } from "@/timing";
 import { useNotificationsStore } from "@/stores/notifications";
 import { useListsStore } from "@/stores/lists";
+import { useUserStore } from "@/stores/user.js";
 import { useRoute } from "vue-router";
+import router from "@/router";
+import { HOME } from "@/router/route-names";
 
 const route = useRoute();
 
 const notificationsStore = useNotificationsStore();
 const listsStore = useListsStore();
+const userStore = useUserStore();
 
 function listNameById(listId: string) {
   const list = listsStore.getList(listId);
   if (list) return list.name;
   return "";
 }
+
+/**
+ * Contacts
+ */
+const contacts: Ref<Contact[]> = ref([]);
+
+function fetchContacts() {
+  rid.contacts.list().then((contactsList) => {
+    contacts.value = contactsList;
+  });
+}
+fetchContacts();
 
 /**
  * Permissions
@@ -59,6 +81,10 @@ const receivedInvitations: Ref<ReceivedInvitation[]> = ref([]);
 
 rid.invitations.onReceived((receivedInvitation) => {
   receivedInvitations.value.push(receivedInvitation);
+
+  if (!isAcceptedReceivedInvitation(receivedInvitation.id)) {
+    notificationsStore.addNotification("Invitation received.");
+  }
 });
 
 /**
@@ -97,19 +123,6 @@ async function acceptReceivedInvitation(receivedInvitation: ReceivedInvitation) 
     listsStore.addContentSharer(receivedInvitation.hostId);
 
     notificationsStore.addNotification("Invitation accepted.");
-
-    // Add permission to share username
-    console.log("Give settings read access to:", receivedInvitation.hostId);
-    await rid.permissions.set([
-      {
-        type: "read",
-        userId: receivedInvitation.hostId,
-        tableName: SETTINGS_TABLE_NAME,
-        condition: {
-          rowId: SETTING_USERNAME,
-        },
-      },
-    ]);
 
     // Add receivedInvitation to check if accepted
     const acceptedReceivedInvitation: AcceptedReceivedInvitation = { id: receivedInvitation.id };
@@ -175,6 +188,13 @@ rid.invitations.onAccepted((acceptedInvitation) => {
     console.log("List not found");
     return;
   }
+
+  if (userStore.autoHandleInvitations) {
+    console.log("auto-handle invitation on Invitations view");
+    handleAcceptedSentInvitation(acceptedInvitation);
+    router.push({ name: HOME });
+    return;
+  }
 });
 
 async function handleAcceptedSentInvitation(acceptedInvitation: AcceptedInvitation) {
@@ -207,22 +227,8 @@ async function handleAcceptedSentInvitation(acceptedInvitation: AcceptedInvitati
       console.log("Could not update list:", e.message);
     }
 
-    // user I'm sharing this list with has shared their username with me. Add as contentSharer
-    console.log("add username content sharer on handle", invitation.userId);
     await listsStore.addContentSharer(invitation.userId);
     await listsStore.fetchContentSharedWithMe();
-
-    // Give permission to username
-    await rid.permissions.set([
-      {
-        type: "read",
-        userId: invitation.userId,
-        tableName: SETTINGS_TABLE_NAME,
-        condition: {
-          rowId: SETTING_USERNAME,
-        },
-      },
-    ]);
 
     // mark as handled
     markAcceptedSentInvitationAsHandled(acceptedInvitation.id);
@@ -293,6 +299,19 @@ async function submitCreateLink() {
   resourceInputValue.value = "";
 }
 
+/** Copy link url */
+const copyLinkUrlButtonTextInitial = "Copy";
+const copyLinkUrlButtonText = ref(copyLinkUrlButtonTextInitial);
+
+function copyLinkUrlToClipboard(url: string): void {
+  copyLinkUrlButtonText.value = "Copied!";
+  navigator.clipboard.writeText(url);
+
+  setTimeout(() => {
+    copyLinkUrlButtonText.value = copyLinkUrlButtonTextInitial;
+  }, 1000);
+}
+
 /**
  * Invite user form
  */
@@ -349,18 +368,17 @@ onUnmounted(() => {
               <option v-for="list in listsStore.getMyLists" :key="list.id" :value="list.id">{{ list.name }}</option>
             </select>
           </div>
+
           <div class="form-control">
-            <label class="form-control-label" for="user-id">User ID</label>
-            <input
-              id="user-id"
-              v-model="userIdInputValue"
-              type="text"
-              class="text-input input-has-border-light is-full-width"
-              autocomplete="off"
-              placeholder="e.g. 7023c9e7-1ffd-44f1-8f3c-26da76553a78"
-              required
-            />
+            <label class="form-control-label" for="contact">Contact</label>
+            <select id="contact" v-model="userIdInputValue" class="select-input input-has-border-light is-full-width">
+              <option disable value="">Select a contact</option>
+              <option v-for="contact of contacts" :key="contact.id" :value="contact.contactId">
+                {{ listsStore.getSharerUsername(contact.contactId) }}
+              </option>
+            </select>
           </div>
+
           <button class="button">{{ inviteButtonText }}</button>
         </form>
       </div>
@@ -436,12 +454,14 @@ onUnmounted(() => {
           <li v-for="invitation of invitationLinks" :key="invitation.id">
             <div>
               <ul class="list-reset">
-                <li>
-                  <strong>Link:</strong> <a :href="invitation.link">{{ invitation.link }}</a>
+                <li class="link-url-item">
+                  <strong>Link:</strong> {{ invitation.link }}
+                  <button class="button is-small-text" @click="copyLinkUrlToClipboard(invitation.link as string)">
+                    {{ copyLinkUrlButtonText }}
+                  </button>
                 </li>
                 <li>Limit: {{ invitation.limit }}</li>
                 <li>Accepted: {{ invitation.accepted }}</li>
-
                 <li>Resource: {{ invitation.resource }}</li>
               </ul>
             </div>
@@ -504,4 +524,10 @@ onUnmounted(() => {
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.link-url-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+</style>

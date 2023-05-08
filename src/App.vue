@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { RouterLink, RouterView } from "vue-router";
 import { listsTable, rid } from "@/rethinkid";
 import { useUserStore } from "@/stores/user.js";
@@ -26,6 +26,26 @@ async function onLogin() {
 
   await userStore.setUserId();
   await userStore.fetchSettings();
+
+  /**
+   * Auto-handle invitations
+   */
+  rid.invitations.onAccepted(() => {
+    if (userStore.autoHandleInvitations) {
+      console.log("Invitation accepted and auto-handle is on, redirect and auto handle.");
+      router.push({ name: INVITATIONS });
+    }
+  });
+
+  /** Received invitations */
+  rid.invitations.onReceived(() => {
+    notificationsStore.addNotification("Invitation received.");
+  });
+
+  // Receive contact connection requests
+  rid.contacts.onConnectionRequest(() => {
+    notificationsStore.addNotification("Contact connection request received.");
+  });
 
   if (!userStore.username) {
     router.push({ name: SETTINGS });
@@ -98,6 +118,41 @@ if (rid.isLoggedIn()) {
 function toggleAccountDropdown() {
   accountDropdownIsVisible.value = !accountDropdownIsVisible.value;
 }
+
+function closeAccountDropdown() {
+  accountDropdownIsVisible.value = false;
+}
+
+/**
+ * Copy user ID to clipboard
+ */
+const copyButtonTextInitial = "Copy user ID";
+const copyButtonText = ref(copyButtonTextInitial);
+
+function copyToClipboard(): void {
+  copyButtonText.value = "Copied!";
+  navigator.clipboard.writeText(userStore.userId);
+
+  setTimeout(() => {
+    copyButtonText.value = copyButtonTextInitial;
+  }, 1000);
+}
+
+function onWindowClick(event: any) {
+  if (event.target.closest("#account-dropdown") || event.target.closest("#toggle-account-button")) return;
+  closeAccountDropdown();
+}
+
+function onEscapeKeyDown(event: any) {
+  if (event.key === "Escape" || event.code === "Escape") {
+    closeAccountDropdown();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("click", onWindowClick);
+  window.addEventListener("keydown", onEscapeKeyDown);
+});
 </script>
 
 <template>
@@ -116,7 +171,7 @@ function toggleAccountDropdown() {
           <template v-else>
             <div class="header-text-item">{{ userStore.username }}</div>
             <button
-              @click="toggleAccountDropdown"
+              @click.stop="toggleAccountDropdown"
               class="header-button link-button"
               :class="{ 'header-button-active': accountDropdownIsVisible }"
               id="toggle-account-button"
@@ -142,7 +197,12 @@ function toggleAccountDropdown() {
               aria-labelledby="toggle-account-button"
             >
               <ul class="account-dropdown-list list-reset">
-                <li>My ID: {{ userStore.userId }}</li>
+                <li>
+                  {{ userStore.userId }}
+                  <button class="button is-small-text" @click="copyToClipboard">
+                    {{ copyButtonText }}
+                  </button>
+                </li>
                 <li><button @click="goToFromAccountDropdown(CONTACTS)" class="link-button">Contacts</button></li>
                 <li><button @click="goToFromAccountDropdown(INVITATIONS)" class="link-button">Invitations</button></li>
                 <li><button @click="goToFromAccountDropdown(SETTINGS)" class="link-button">Settings</button></li>

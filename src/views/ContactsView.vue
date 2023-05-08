@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from "vue";
 import type { Ref } from "vue";
-import { rid } from "@/rethinkid";
+import { rid, SETTINGS_TABLE_NAME, SETTING_USERNAME } from "@/rethinkid";
 import { STATE_CHANGE_DURATION_MS } from "@/timing";
 import type { Contact, Message, ConnectionRequest } from "@rethinkid/rethinkid-js-sdk";
 import { useNotificationsStore } from "@/stores/notifications";
+import { useListsStore } from "@/stores/lists";
 
 interface SentConnectionRequest {
   id: string; // contact's user ID
 }
 
 const notificationsStore = useNotificationsStore();
+const listsStore = useListsStore();
 
 const contactIdInputValue = ref("");
 
@@ -172,10 +174,9 @@ async function insertSentConnectionRequest(contactId: string): Promise<void> {
 async function connectRequestOrAccept(contactId: string): Promise<void> {
   try {
     const connectResponse = await rid.contacts.connect(contactId);
-    console.log("connectResponse", connectResponse);
 
-    // Remove accepted sent request from list
     if (connectResponse.message === "Contact connection request accepted.") {
+      // Remove accepted received request from list
       receivedConnectionRequests.value = receivedConnectionRequests.value.filter(
         (request) => request.contactId !== contactId,
       );
@@ -195,11 +196,15 @@ function isConnectionRequestSent(contactId: string): boolean {
 let unsubscribe: null | (() => Promise<Message>) = null;
 
 rid.contacts
-  .subscribe((changes) => {
+  .subscribe(async (changes) => {
     //  added
     if (changes.new_val && changes.old_val === null) {
       console.log("Added new contact", changes.new_val);
+      notificationsStore.addNotification("Contact added.");
       const newContact = changes.new_val as Contact;
+
+      await listsStore.addContentSharer(newContact.contactId);
+
       contacts.value.push(newContact);
 
       // remove pending connection from database and store
@@ -214,10 +219,12 @@ rid.contacts
     // deleted
     if (changes.new_val === null && changes.old_val) {
       console.log("Deleted contact", changes.old_val);
+      notificationsStore.addNotification("Contact deleted.");
     }
     // updated
     if (changes.new_val && changes.old_val) {
       console.log("Updated contact", changes.new_val);
+      notificationsStore.addNotification("Contact updated.");
       const updatedContact = changes.new_val as Contact;
       const index = contacts.value.findIndex((contact) => contact.id === updatedContact.id);
 
@@ -276,7 +283,7 @@ onUnmounted(() => {
         <h2>Contacts List</h2>
         <ul class="contacts-list list-reset">
           <li v-for="contact in contacts" :key="contact.id">
-            <div>{{ contact.contactId }}</div>
+            <div>{{ listsStore.getSharerUsername(contact.contactId) }}</div>
             <div class="button-list">
               <button v-if="contact.connected" @click="disconnect(contact.contactId)" class="button button-danger">
                 Unfriend

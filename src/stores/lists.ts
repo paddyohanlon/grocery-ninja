@@ -23,15 +23,16 @@ export const useListsStore = defineStore("lists", {
     async addContentSharer(hostId: string): Promise<void> {
       const contentSharer: ContentSharer = { id: hostId, username: "" };
 
-      console.log("contentSharer", contentSharer);
+      try {
+        // ID might already exist which is fine
+        await contentSharersTable.insert(contentSharer);
 
-      // ID might already exist which is fine
-      await contentSharersTable.insert(contentSharer);
-
-      if (!this.contentSharers) this.contentSharers = [];
-      if (this.contentSharers.some((sharer) => sharer.id === contentSharer.id)) return;
-      console.log("Add sharer to local state");
-      this.contentSharers.push(contentSharer);
+        if (!this.contentSharers) this.contentSharers = [];
+        if (this.contentSharers.some((sharer) => sharer.id === contentSharer.id)) return;
+        this.contentSharers.push(contentSharer);
+      } catch (e: any) {
+        console.log("addContentSharer error:", e.message);
+      }
     },
     // Fetch lists and usernames shared with me
     async fetchContentSharedWithMe(): Promise<void> {
@@ -40,9 +41,8 @@ export const useListsStore = defineStore("lists", {
       try {
         this.contentSharers = (await contentSharersTable.read()) as ContentSharer[];
 
-        console.log("this.contentSharers", this.contentSharers);
-
         for (const sharer of this.contentSharers) {
+          console.log("sharer", sharer);
           const hostId = sharer.id;
 
           try {
@@ -281,10 +281,11 @@ export const useListsStore = defineStore("lists", {
   },
   getters: {
     // Use user ID if username not available
+    // TODO
     getSharerUsername: (state): ((userId: string) => string) => {
       return (userId: string) => {
         const sharer = state.contentSharers?.find((sharer) => sharer.id === userId);
-        return sharer ? sharer.username : userId;
+        return sharer && sharer.username ? sharer.username : userId;
       };
     },
     getList: (state): ((listId: string) => List | null) => {

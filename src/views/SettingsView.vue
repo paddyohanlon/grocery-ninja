@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useUserStore } from "@/stores/user";
-import type { Settings } from "@/types";
 import { useRouter } from "vue-router";
 import { HOME } from "@/router/route-names";
 
@@ -14,10 +13,16 @@ const buttonTextUpdating = "Saving...";
 const buttonText = ref(buttonTextInitial);
 
 const newUsername = ref(userStore.username);
+console.log("userStore.autoHandleInvitations settings", userStore.autoHandleInvitations);
+const autoHandleInvitationsOption = ref(userStore.autoHandleInvitations ? "yes" : "no");
 
 async function submitSave() {
   if (buttonText.value === buttonTextUpdating) return;
+
   await userStore.updateUsername(newUsername.value);
+
+  const newAutoHandleInvitation = autoHandleInvitationsOption.value === "yes";
+  await userStore.updateAutoHandleInvitation(newAutoHandleInvitation);
   router.push({ name: HOME });
 }
 </script>
@@ -38,6 +43,19 @@ async function submitSave() {
             required
           />
         </div>
+
+        <div class="form-control">
+          <label class="form-control-label" for="auto-handle-invitations">Auto-handle invitations</label>
+          <select
+            id="auto-handle-invitations"
+            v-model="autoHandleInvitationsOption"
+            class="select-input input-has-border-light is-full-width"
+          >
+            <option value="yes" :selected="userStore.autoHandleInvitations">Yes</option>
+            <option value="no" :selected="!userStore.autoHandleInvitations">No</option>
+          </select>
+        </div>
+
         <button class="button">{{ buttonText }}</button>
       </form>
     </div>

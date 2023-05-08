@@ -198,6 +198,10 @@ select {
   font-weight: 700;
 }
 
+.is-small-text {
+  font-size: 0.8rem;
+}
+
 .is-full-width {
   width: 100%;
 }

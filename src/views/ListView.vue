@@ -69,11 +69,11 @@ function toggleListDropdown() {
   listDropdownIsVisible.value = !listDropdownIsVisible.value;
 }
 
-function deleteList() {
+async function deleteList() {
   if (window.confirm("Are you sure you want to delete this list?")) {
     if (!list.value) return;
 
-    listsStore.deleteList(list.value);
+    await listsStore.deleteList(list.value);
     router.push({ name: HOME });
   }
 }
@@ -164,11 +164,11 @@ function submitUpdateList() {
                     </ul>
                   </li>
                   <li v-if="list.userIDsWithAccess.length > 0">
-                    <h3>User IDs with Access</h3>
+                    <h3>Shared with</h3>
                     <ul class="list-reset">
                       <li v-for="(userIdWithAccess, index) of list.userIDsWithAccess" :key="index">
-                        <strong v-if="userIdWithAccess === userStore.userId">(me) </strong>
-                        {{ userIdWithAccess }}
+                        <template v-if="userIdWithAccess === userStore.userId">Me</template>
+                        <template v-else>{{ listsStore.getSharerUsername(userIdWithAccess) }}</template>
                       </li>
                     </ul>
                   </li>
@@ -347,6 +347,7 @@ function submitUpdateList() {
 
 .list-dropdown {
   top: 45px;
+  z-index: 10000;
 }
 
 .list-dropdown-list li {
