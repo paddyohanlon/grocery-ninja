@@ -4,7 +4,7 @@ import { ref } from "vue";
 const SIDEBAR_LEFT_IS_VISIBLE = "sidebarLeftIsVisible";
 
 function getLocalStorageBoolean(key: string): boolean {
-  return localStorage.getItem(key) === "true" ? true : false;
+  return localStorage.getItem(key) === "false" ? false : true;
 }
 
 const sidebarLeftIsVisible = ref(getLocalStorageBoolean(SIDEBAR_LEFT_IS_VISIBLE));
