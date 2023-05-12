@@ -363,13 +363,14 @@ onUnmounted(() => {
               id="resource"
               v-model="resourceInputValue"
               class="select-input input-has-border-light is-full-width"
+              required
             >
               <option disable value="">Select a list to share</option>
               <option v-for="list in listsStore.getMyLists" :key="list.id" :value="list.id">{{ list.name }}</option>
             </select>
           </div>
 
-          <div class="form-control">
+          <div v-if="contacts && contacts.length > 0" class="form-control">
             <label class="form-control-label" for="contact">Contact</label>
             <select id="contact" v-model="userIdInputValue" class="select-input input-has-border-light is-full-width">
               <option disable value="">Select a contact</option>
@@ -377,6 +378,19 @@ onUnmounted(() => {
                 {{ listsStore.getSharerUsername(contact.contactId) }}
               </option>
             </select>
+          </div>
+
+          <div class="form-control">
+            <label class="form-control-label" for="user-id">User ID</label>
+            <input
+              id="user-id"
+              v-model="userIdInputValue"
+              type="text"
+              class="text-input"
+              autocomplete="off"
+              placeholder="e.g. 7023c9e7-1ffd-44f1-8f3c-26da76553a78"
+              required
+            />
           </div>
 
           <button class="button">{{ inviteButtonText }}</button>
@@ -431,6 +445,7 @@ onUnmounted(() => {
               id="resource"
               v-model="resourceInputValue"
               class="select-input input-has-border-light is-full-width"
+              required
             >
               <option disable value="">Select a list to share</option>
               <option v-for="list in listsStore.getMyLists" :key="list.id" :value="list.id">{{ list.name }}</option>
