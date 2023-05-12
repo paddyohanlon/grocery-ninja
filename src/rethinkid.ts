@@ -2,11 +2,9 @@ import { RethinkID, TableAPI } from "@rethinkid/rethinkid-js-sdk";
 import type { Options } from "@rethinkid/rethinkid-js-sdk";
 import type { List } from "@/types";
 
-console.log("app ID", import.meta.env.VITE_APP_ID);
-
 const config: Options = {
-  appId: import.meta.env.VITE_APP_ID,
-  loginRedirectUri: import.meta.env.VITE_REDIRECT_URI,
+  appId: import.meta.env.VITE_RETHINKID_APP_ID,
+  loginRedirectUri: import.meta.env.VITE_RETHINKID_REDIRECT_URI,
   onApiConnectError: (rid, message) => {
     console.log("onApiConnectError callback fired! Message:", message);
 
@@ -17,8 +15,8 @@ const config: Options = {
 };
 
 if (import.meta.env.DEV) {
-  config.oAuthUri = "http://localhost:3377";
-  config.dataApiUri = "http://localhost:3377";
+  config.oAuthUri = import.meta.env.VITE_RETHINKID_MOCK_SERVER_URL;
+  config.dataApiUri = import.meta.env.VITE_RETHINKID_MOCK_SERVER_URL;
 }
 
 export const rid = new RethinkID(config);
@@ -33,7 +31,7 @@ export const listsTable = rid.table(LISTS_TABLE_NAME, {
     console.log("set permissions to matchUserId on userIDsWithAccess");
     await rid.permissions.set([
       {
-        type: "read",
+        type: "read", // private sort of
         userId: "*",
         tableName: LISTS_TABLE_NAME,
         condition: {
@@ -41,11 +39,11 @@ export const listsTable = rid.table(LISTS_TABLE_NAME, {
         },
       },
       {
-        type: "insert",
-        userId: "*",
+        type: "insert", // public with matchUserId, others must be written to first
+        userId: "*", // optional if using matchUserId
         tableName: LISTS_TABLE_NAME,
         condition: {
-          matchUserId: "userIDsWithAccess",
+          matchUserId: "userIDsWithAccess", // matchUserIdField
         },
       },
       {

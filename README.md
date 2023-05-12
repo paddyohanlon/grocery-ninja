@@ -1,5 +1,11 @@
 # grocery-list
 
+## Local development
+
+See `.env.development` for RethinkID mock server configuration variables.
+
+## Vue 3 default README
+
 This template should help get you started developing with Vue 3 in Vite.
 
 ## Recommended IDE Setup
