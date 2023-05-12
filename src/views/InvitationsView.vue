@@ -55,10 +55,8 @@ rid.permissions.get().then((response) => {
  */
 const sentInvitations: Ref<Invitation[]> = ref([]);
 
-function fetchInvitations() {
-  rid.invitations.list({ includeAccepted: true }).then((response) => {
-    sentInvitations.value = response;
-  });
+async function fetchInvitations() {
+  sentInvitations.value = await rid.invitations.list({ includeAccepted: true });
 }
 fetchInvitations();
 
@@ -168,26 +166,7 @@ const acceptedInvitations: Ref<AcceptedInvitation[]> = ref([]);
 rid.invitations.onAccepted((acceptedInvitation) => {
   acceptedInvitations.value.push(acceptedInvitation);
 
-  console.log("acceptedInvitation", acceptedInvitation);
-
-  const invitation = sentInvitations.value.find((invitation) => invitation.id === acceptedInvitation.invitationId);
-
-  if (!invitation) {
-    console.log("Invitation of acceptedInvitation not found");
-    return;
-  }
-
-  if (!listsStore.lists) {
-    console.log("No lists");
-    return;
-  }
-
-  const list = listsStore.lists.find((list) => list.id === invitation.resource);
-
-  if (!list) {
-    console.log("List not found");
-    return;
-  }
+  console.log("inAccepted acceptedInvitation", acceptedInvitation);
 
   if (userStore.autoHandleInvitations) {
     console.log("auto-handle invitation on Invitations view");
@@ -205,10 +184,7 @@ async function handleAcceptedSentInvitation(acceptedInvitation: AcceptedInvitati
     return;
   }
 
-  if (!invitation.userId) {
-    console.log("Invitation of acceptedInvitation has no userId");
-    return;
-  }
+  console.log("invitation to be handled", invitation);
 
   try {
     const list = await listsStore.getList(invitation.resource);
@@ -218,7 +194,14 @@ async function handleAcceptedSentInvitation(acceptedInvitation: AcceptedInvitati
       return;
     }
 
-    list.userIDsWithAccess.push(invitation.userId);
+    const userId = acceptedInvitation.userId;
+
+    if (!userId) {
+      console.log("acceptedInvitation has no userId");
+      return;
+    }
+
+    list.userIDsWithAccess.push(userId);
 
     try {
       const response = await listsStore.updateList(list);
@@ -227,7 +210,7 @@ async function handleAcceptedSentInvitation(acceptedInvitation: AcceptedInvitati
       console.log("Could not update list:", e.message);
     }
 
-    await listsStore.addContentSharer(invitation.userId);
+    await listsStore.addContentSharer(userId);
     await listsStore.fetchContentSharedWithMe();
 
     // mark as handled
