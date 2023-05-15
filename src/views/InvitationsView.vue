@@ -369,7 +369,7 @@ onUnmounted(() => {
               id="user-id"
               v-model="userIdInputValue"
               type="text"
-              class="text-input"
+              class="text-input is-full-width"
               autocomplete="off"
               placeholder="e.g. 7023c9e7-1ffd-44f1-8f3c-26da76553a78"
               required
