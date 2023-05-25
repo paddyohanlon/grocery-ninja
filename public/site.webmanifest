@@ -1,0 +1,17 @@
+{
+  "lang": "en",
+  "name": "Grocery Ninja",
+  "short_name": "Grocery Ninja",
+  "description": "Shop like a ninja.",
+  "icons": [
+    {
+      "src": "/icons/icon-180.png",
+      "type": "image/png",
+      "sizes": "180x180"
+    }
+  ],
+  "start_url": "/?utm_source=homescreen",
+  "background_color": "#00bd7e",
+  "theme_color": "#00bd7e",
+  "display": "minimal-ui"
+}
