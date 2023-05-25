@@ -3,11 +3,10 @@ import { ref, watch } from "vue";
 import { useListsStore } from "@/stores/lists";
 import { useUserStore } from "@/stores/user.js";
 import { useRoute, useRouter } from "vue-router";
-import { HOME, INVITATIONS, LIST_ITEM } from "@/router/route-names";
-import ListsSidebar from "@/components/ListsSidebar.vue";
+import { HOME, INVITATIONS, LISTS, LIST_ITEM } from "@/router/route-names";
+import ListsNav from "@/components/ListsNav.vue";
 import CheckItemButton from "@/components/CheckItemButton.vue";
 import { STATE_CHANGE_DURATION_MS } from "@/timing";
-import type { List } from "@/types";
 
 const listsStore = useListsStore();
 const userStore = useUserStore();
@@ -93,12 +92,13 @@ function submitUpdateList() {
 <template>
   <BaseLayout>
     <template #sidebarLeft>
-      <ListsSidebar />
+      <ListsNav />
     </template>
     <template #main>
       <div class="list-content">
         <template v-if="!list || !newList">List not found.</template>
         <template v-else>
+          <RouterLink class="hide-above-900px" :to="{ name: LISTS }">&larr; Lists</RouterLink>
           <header class="list-header">
             <div>
               <form class="list-name-form" @submit.prevent="submitUpdateList()">
@@ -264,7 +264,7 @@ function submitUpdateList() {
 }
 
 .list-content {
-  padding: 15px 25px;
+  padding: 1rem;
   width: 100%;
 }
 

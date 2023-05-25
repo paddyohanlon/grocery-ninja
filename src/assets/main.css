@@ -4,6 +4,12 @@
   height: 100vh;
 }
 
+h1 {
+  color: var(--color-white);
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
 .page-container {
   display: flex;
   flex-direction: column;
@@ -210,6 +216,10 @@ select {
   border-color: var(--color-black);
 }
 
+.has-padding {
+  padding: 1rem;
+}
+
 .card {
   background: var(--color-black);
   border-radius: var(--border-radius);
@@ -232,13 +242,18 @@ select {
 
 /* Contacts and Invitations views */
 .contacts-header {
-  padding: 1rem;
+  padding: 1rem 1rem 0;
 }
 .contacts-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: 1fr 1fr;
-  padding: 1rem;
+  grid-template-columns: 1fr;
+  padding: 0 1rem 1rem;
+}
+@media only screen and (min-width: 900px) {
+  .contacts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .contacts-list > li {
@@ -254,5 +269,19 @@ select {
   gap: 0.5rem;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
 }
 /* End Contacts and Invitations views */
+
+/* Responsive displaying */
+@media only screen and (max-width: 899.9px) {
+  .hide-below-900px {
+    display: none !important;
+  }
+}
+@media only screen and (min-width: 900px) {
+  .hide-above-900px {
+    display: none !important;
+  }
+}
+/* End Responsive displaying */

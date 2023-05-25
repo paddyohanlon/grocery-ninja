@@ -18,7 +18,7 @@ function toggleSidebarLeft(): void {
 
 <template>
   <div class="view-container">
-    <aside :class="{ 'sidebar-left-closed': !sidebarLeftIsVisible }" class="sidebar-left">
+    <aside :class="{ 'sidebar-left-closed': !sidebarLeftIsVisible }" class="sidebar-left hide-below-900px">
       <button
         @click="toggleSidebarLeft"
         :class="{ 'menu-icon-active': sidebarLeftIsVisible }"

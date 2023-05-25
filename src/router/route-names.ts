@@ -1,5 +1,6 @@
 export const HOME = "home";
 export const SETTINGS = "settings";
+export const LISTS = "lists";
 export const LIST = "list";
 export const LIST_ITEM = "listItem";
 export const CONTACTS = "contacts";

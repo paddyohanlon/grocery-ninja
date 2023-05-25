@@ -5,7 +5,6 @@ import { LIST } from "@/router/route-names";
 import { useListsStore } from "@/stores/lists";
 import CheckItemButton from "@/components/CheckItemButton.vue";
 import { STATE_CHANGE_DURATION_MS } from "@/timing";
-import type { ListItem } from "@/types";
 
 const listsStore = useListsStore();
 
@@ -78,7 +77,10 @@ function deleteItem() {
   <template v-if="!item || !newItem">Item not found.</template>
   <template v-else>
     <aside :class="{ 'sidebar-right-closed': !sidebarRightIsVisible }" class="sidebar-right">
-      <div class="sidebar-actions">
+      <RouterLink class="hide-above-900px has-padding" :to="{ name: LIST, params: { listId: listIdParam } }"
+        >&larr; List</RouterLink
+      >
+      <div class="sidebar-actions hide-below-900px">
         <button class="close-item-button link-button" @click="closeItem">
           <span class="screen-reader-text">Close item</span>&times;
         </button>
@@ -165,7 +167,12 @@ function deleteItem() {
   flex-direction: column;
 
   box-shadow: -3px 3px 3px var(--color-background-shadow);
-  width: 360px;
+  width: 100vw;
+}
+@media only screen and (min-width: 900px) {
+  .sidebar-right {
+    width: 360px;
+  }
 }
 .sidebar-right-closed {
   width: 0;

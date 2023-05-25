@@ -307,5 +307,9 @@ onMounted(() => {
 
 .header-text-item {
   padding: 0 12px;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

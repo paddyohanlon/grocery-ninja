@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from "vue";
 import type { Ref } from "vue";
-import { rid, SETTINGS_TABLE_NAME, SETTING_USERNAME } from "@/rethinkid";
+import { rid } from "@/rethinkid";
 import { STATE_CHANGE_DURATION_MS } from "@/timing";
 import type { Contact, Message, ConnectionRequest } from "@rethinkid/rethinkid-js-sdk";
 import { useNotificationsStore } from "@/stores/notifications";
