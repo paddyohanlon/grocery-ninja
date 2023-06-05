@@ -33,7 +33,7 @@ async function createAndGoToList() {
 </script>
 
 <template>
-  <nav aria-label="Lists" class="list-nav">
+  <nav aria-label="Lists" class="list-nav can-scroll">
     <ul v-if="lists && lists.length > 0" class="list-reset">
       <li v-for="list in lists" :key="list.id">
         <RouterLink :class="{ 'is-active': listIdParam === list.id }" :to="{ name: LIST, params: { listId: list.id } }"
@@ -81,10 +81,6 @@ async function createAndGoToList() {
 <style scoped>
 .list-nav {
   flex: 1;
-
-  overflow-y: auto;
-  overflow-x: hidden;
-  position: relative;
 }
 
 .list-nav a {

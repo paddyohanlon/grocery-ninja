@@ -220,6 +220,12 @@ select {
   padding: 1rem;
 }
 
+.can-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
 .card {
   background: var(--color-black);
   border-radius: var(--border-radius);

@@ -33,7 +33,7 @@ function toggleSidebarLeft(): void {
         <slot name="sidebarLeft"></slot>
       </div>
     </aside>
-    <main class="column-center"><slot name="main"></slot></main>
+    <main class="column-center"><slot name="main"></slot></main> 
     <slot name="sidebarRight"></slot>
   </div>
 </template>

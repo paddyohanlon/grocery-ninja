@@ -196,42 +196,10 @@ function submitUpdateList() {
             </div>
           </form>
 
-          <ul class="list-reset">
-            <li
-              v-for="item in listsStore.getUncheckedItems(listIdParam)"
-              :key="item.id"
-              :class="{ 'is-active': itemIdParam === item.id }"
-              class="item"
-            >
-              <CheckItemButton :listId="listIdParam" :item="item" />
-              <RouterLink :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }">
-                {{ item.name }}
-              </RouterLink>
-            </li>
-          </ul>
-
-          <template v-if="listsStore.getCheckedItems(listIdParam).length > 0">
-            <h3 class="checked-title">
-              <button
-                @click="toggleCheckedList"
-                class="toggle-checked-button link-button"
-                id="toggle-checked-button"
-                aria-controls="checked-dropdown"
-                :aria-expanded="checkedListIsVisible"
-              >
-                <span :class="{ 'is-open': checkedListIsVisible }" class="disclose-triangle">&rsaquo;</span>
-                <span><span class="is-bold">Checked</span> {{ listsStore.getCheckedItems(listIdParam).length }}</span>
-              </button>
-            </h3>
-
-            <ul
-              :class="{ 'visually-hidden': !checkedListIsVisible }"
-              class="list-reset"
-              id="checked-dropdown"
-              aria-labelledby="toggle-checked-button"
-            >
+          <div class="list-items-shell can-scroll">
+            <ul class="list-reset">
               <li
-                v-for="item in listsStore.getCheckedItems(listIdParam)"
+                v-for="item in listsStore.getUncheckedItems(listIdParam)"
                 :key="item.id"
                 :class="{ 'is-active': itemIdParam === item.id }"
                 class="item"
@@ -242,7 +210,41 @@ function submitUpdateList() {
                 </RouterLink>
               </li>
             </ul>
-          </template>
+
+            <template v-if="listsStore.getCheckedItems(listIdParam).length > 0">
+              <h3 class="checked-title">
+                <button
+                  @click="toggleCheckedList"
+                  class="toggle-checked-button link-button"
+                  id="toggle-checked-button"
+                  aria-controls="checked-dropdown"
+                  :aria-expanded="checkedListIsVisible"
+                >
+                  <span :class="{ 'is-open': checkedListIsVisible }" class="disclose-triangle">&rsaquo;</span>
+                  <span><span class="is-bold">Checked</span> {{ listsStore.getCheckedItems(listIdParam).length }}</span>
+                </button>
+              </h3>
+
+              <ul
+                :class="{ 'visually-hidden': !checkedListIsVisible }"
+                class="list-reset"
+                id="checked-dropdown"
+                aria-labelledby="toggle-checked-button"
+              >
+                <li
+                  v-for="item in listsStore.getCheckedItems(listIdParam)"
+                  :key="item.id"
+                  :class="{ 'is-active': itemIdParam === item.id }"
+                  class="item"
+                >
+                  <CheckItemButton :listId="listIdParam" :item="item" />
+                  <RouterLink :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }">
+                    {{ item.name }}
+                  </RouterLink>
+                </li>
+              </ul>
+            </template>
+          </div>
         </template>
       </div>
     </template>
@@ -264,6 +266,9 @@ function submitUpdateList() {
 }
 
 .list-content {
+  display: flex;
+  flex-direction: column;
+
   padding: 1rem;
   width: 100%;
 }
@@ -365,5 +370,9 @@ function submitUpdateList() {
   font-style: italic;
   font-size: 0.8rem;
   margin-bottom: 0.25rem;
+}
+
+.list-items-shell {
+  padding-bottom: 5rem;
 }
 </style>

@@ -87,7 +87,7 @@ function deleteItem() {
       </div>
 
       <div class="item-shell">
-        <div class="item-content">
+        <div class="item-content can-scroll">
           <form @submit.prevent="updateItem()">
             <div class="item-header">
               <CheckItemButton :listId="listIdParam" :item="item" />
@@ -196,12 +196,6 @@ function deleteItem() {
 
   padding: 10px 15px;
   overflow: hidden;
-}
-
-.item-content {
-  overflow-y: auto;
-  overflow-x: hidden;
-  position: relative;
 }
 
 .item-header {
