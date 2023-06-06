@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
+import type { Ref } from "vue";
 import { useListsStore } from "@/stores/lists";
 import { useUserStore } from "@/stores/user.js";
 import { useRoute, useRouter } from "vue-router";
@@ -55,9 +56,19 @@ watch(
   },
 );
 
-function addItem() {
+// Template elements with a `ref` attribute
+type HTMLRef = null | HTMLElement;
+const addItemButton: Ref<HTMLRef> = ref(null);
+
+function focusElement(element: HTMLRef): void {
+  if (!element) return;
+  element.focus();
+}
+
+function submitAddItem() {
   listsStore.addItem(listIdParam.value, newItemName.value);
   newItemName.value = "";
+  focusElement(addItemButton.value);
 }
 
 function toggleCheckedList() {
@@ -180,10 +191,11 @@ function submitUpdateList() {
             </div>
           </header>
 
-          <form @submit.prevent="addItem()" class="create-item-form">
+          <form @submit.prevent="submitAddItem()" class="create-item-form">
             <label>
               <span class="screen-reader-text">Add an item</span>
               <input
+                ref="addItemButton"
                 v-model="newItemName"
                 type="text"
                 class="item-name-input text-input"
@@ -204,7 +216,7 @@ function submitUpdateList() {
                 :class="{ 'is-active': itemIdParam === item.id }"
                 class="item"
               >
-                <CheckItemButton :listId="listIdParam" :item="item" />
+                <CheckItemButton :listId="listIdParam" :item="item" @item-check-toggled="focusElement(addItemButton)" />
                 <RouterLink :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }">
                   {{ item.name }}
                 </RouterLink>
@@ -237,7 +249,7 @@ function submitUpdateList() {
                   :class="{ 'is-active': itemIdParam === item.id }"
                   class="item"
                 >
-                  <CheckItemButton :listId="listIdParam" :item="item" />
+                  <CheckItemButton :listId="listIdParam" :item="item" @item-check-toggled="focusElement(addItemButton)" />
                   <RouterLink :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }">
                     {{ item.name }}
                   </RouterLink>
@@ -307,13 +319,13 @@ function submitUpdateList() {
 .item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  /* gap: 10px; */
 
   background: var(--color-black);
   box-shadow: 3px 3px 3px var(--color-background-shadow);
   border-radius: var(--border-radius);
   margin-bottom: 10px;
-  padding: 10px 15px;
+  /* padding: 10px 15px; */
   position: relative;
 }
 .item:hover {

@@ -18,6 +18,11 @@
   --border-radius: 5px;
 }
 
+/* Focus visual debugging */
+*:focus {
+  border: 3px dashed yellow !important;
+}
+
 *,
 *::before,
 *::after {
