@@ -19,9 +19,9 @@
 }
 
 /* Focus visual debugging */
-*:focus {
+/* *:focus {
   border: 3px dashed yellow !important;
-}
+} */
 
 *,
 *::before,
