@@ -28,3 +28,8 @@ export interface OrderTableDoc {
   id: string; // table name
   order: string[]; // doc IDs
 }
+
+export type DataConfig = {
+  APICall: () => Promise<any>;
+  localItemName: string;
+};

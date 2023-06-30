@@ -1,7 +1,9 @@
 /* eslint-env serviceworker */
 const version = "v1";
 const staticCacheName = version + "_staticfiles";
-const urlsToCache = ["/", "/favicon.ico", "/site.webmanifest", "/icons/icon-180.png"];
+const urlsToCache = [
+  /* populated by update-service-worker.js */
+];
 
 const cacheList = [staticCacheName];
 
@@ -54,22 +56,22 @@ addEventListener("fetch", (fetchEvent) => {
         // Put a copy in the cache
         console.log("SW: request.url", request);
 
-        const acceptHeader = request.headers.get("Accept");
-        const isNotSocketIO = !request.url.includes("socket.io");
-        const isNotHTML = acceptHeader ? !acceptHeader.includes("text/html") : true;
+        // const acceptHeader = request.headers.get("Accept");
+        // const isNotSocketIO = !request.url.includes("socket.io");
+        // const isNotHTML = acceptHeader ? !acceptHeader.includes("text/html") : true;
 
-        if (isNotSocketIO && isNotHTML) {
-          const copy = responseFromFetch.clone();
-          fetchEvent.waitUntil(
-            caches.open(staticCacheName).then((staticCache) => {
-              console.log("SW: Fetch - put in cache");
+        // if (isNotSocketIO && isNotHTML) {
+        //   const copy = responseFromFetch.clone();
+        //   fetchEvent.waitUntil(
+        //     caches.open(staticCacheName).then((staticCache) => {
+        //       console.log("SW: Fetch - put in cache");
 
-              return staticCache.put(request, copy);
-            }),
-          );
-        } else {
-          console.log("SW: Fetch - DO NOT put in cache");
-        }
+        //       return staticCache.put(request, copy);
+        //     }),
+        //   );
+        // } else {
+        //   console.log("SW: Fetch - DO NOT put in cache");
+        // }
         return responseFromFetch;
       })
       .catch(() => {

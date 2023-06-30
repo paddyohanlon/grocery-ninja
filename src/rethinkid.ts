@@ -1,9 +1,10 @@
 import { RethinkID, TableAPI } from "@rethinkid/rethinkid-js-sdk";
 import type { Options } from "@rethinkid/rethinkid-js-sdk";
-import type { List } from "@/types";
+import type { List, DataConfig } from "@/types";
 
 const config: Options = {
   appId: import.meta.env.VITE_RETHINKID_APP_ID,
+  // loginRedirectUri: 'http://localhost:8080',
   loginRedirectUri: import.meta.env.VITE_RETHINKID_REDIRECT_URI,
   onApiConnectError: (rid, message) => {
     console.log("onApiConnectError callback fired! Message:", message);
@@ -14,7 +15,7 @@ const config: Options = {
   },
 };
 
-if (import.meta.env.DEV) {
+if (import.meta.env.VITE_RETHINKID_USE_MOCK || import.meta.env.DEV) {
   config.oAuthUri = import.meta.env.VITE_RETHINKID_MOCK_SERVER_URL;
   config.dataApiUri = import.meta.env.VITE_RETHINKID_MOCK_SERVER_URL;
 }
@@ -102,3 +103,39 @@ export const settingsTable = rid.table(SETTINGS_TABLE_NAME, {
 export async function getOwnedOrSharedListsTable(list: List): Promise<TableAPI> {
   return rid.table(LISTS_TABLE_NAME, { userId: list.hostId });
 }
+
+// Data fetch config
+
+export async function getAPIOrLocalData({ APICall, localItemName }: DataConfig): Promise<any> {
+  console.log("Get", localItemName);
+  if (window.navigator.onLine) {
+    const data = await APICall();
+    localStorage.setItem(localItemName, JSON.stringify(data));
+    console.log("online: get from API:", data);
+    return data;
+  }
+  const dataJSONString = localStorage.getItem(localItemName);
+  if (!dataJSONString) return null;
+  const data = JSON.parse(dataJSONString);
+  console.log("offline: get from localStorage:", data);
+  return data;
+}
+
+export function createDataConfig(APICall: () => Promise<any>, localItemName: string): DataConfig {
+  const dataConfig = {
+    APICall,
+    localItemName,
+  };
+  Object.freeze(dataConfig);
+  return dataConfig;
+}
+
+export const userInfoConfig = createDataConfig(() => rid.users.getInfo(), "userInfo");
+export const settingsConfig = createDataConfig(() => settingsTable.read(), "settings");
+export const listsConfig = createDataConfig(() => listsTable.read(), "lists");
+export const listsOrderDocConfig = createDataConfig(
+  () => orderTable.read({ rowId: LISTS_TABLE_NAME }),
+  "listsOrderDoc",
+);
+export const contentSharersConfig = createDataConfig(() => contentSharersTable.read(), "contentSharers");
+export const contactsListConfig = createDataConfig(() => rid.contacts.list(), "contactsList");

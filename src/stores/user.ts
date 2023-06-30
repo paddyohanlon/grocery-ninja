@@ -1,10 +1,12 @@
 import { defineStore } from "pinia";
 import {
-  rid,
   settingsTable,
   SETTING_PRIMARY_LIST_ID,
   SETTING_USERNAME,
   SETTING_AUTO_HANDLE_INVITATIONS,
+  getAPIOrLocalData,
+  userInfoConfig,
+  settingsConfig,
 } from "@/rethinkid";
 
 export const useUserStore = defineStore("user", {
@@ -19,13 +21,13 @@ export const useUserStore = defineStore("user", {
     setLoggedIn(status: boolean): void {
       this.loggedIn = status;
     },
-    async setUserId(): Promise<void> {
-      rid.users.getInfo().then((response) => {
-        this.userId = response.id;
-      });
+    async fetchUserInfo(): Promise<void> {
+      const userInfo = await getAPIOrLocalData(userInfoConfig);
+      this.userId = userInfo.id;
     },
     async fetchSettings(): Promise<void> {
-      const settings = (await settingsTable.read()) as any[];
+      const settings = (await getAPIOrLocalData(settingsConfig)) as any[];
+      // const settings = (await settingsTable.read()) as any[];
       const username = settings.find((setting) => setting.id === SETTING_USERNAME);
       this.username = username.value;
 

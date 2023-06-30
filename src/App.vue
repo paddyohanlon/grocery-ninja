@@ -12,6 +12,12 @@ import type { List } from "@/types";
 const router = useRouter();
 const route = useRoute();
 
+console.log("initial window.navigator.onLine", window.navigator.onLine);
+
+const online = ref(window.navigator.onLine);
+window.addEventListener("online", () => (online.value = true));
+window.addEventListener("offline", () => (online.value = false));
+
 const loading = ref(true);
 
 const accountDropdownIsVisible = ref(false);
@@ -21,10 +27,9 @@ const listsStore = useListsStore();
 const notificationsStore = useNotificationsStore();
 
 async function onLogin() {
-  console.log("logged in!");
   userStore.setLoggedIn(true);
 
-  await userStore.setUserId();
+  await userStore.fetchUserInfo();
   await userStore.fetchSettings();
 
   /**
@@ -55,38 +60,38 @@ async function onLogin() {
     await listsStore.fetchContentSharedWithMe();
 
     // Subscribe to my lists table changes
-    console.log("do subscribe");
-    listsTable.subscribe({}, (changes) => {
-      //  added
-      if (changes.new_val && changes.old_val === null) {
-        console.log("Added", changes.new_val);
-      }
-      // deleted
-      if (changes.new_val === null && changes.old_val) {
-        console.log("One of my lists was deleted", changes.old_val);
-        const deletedList = changes.old_val as List;
+    if (window.navigator.onLine) {
+      listsTable.subscribe({}, (changes) => {
+        //  added
+        if (changes.new_val && changes.old_val === null) {
+          console.log("Added", changes.new_val);
+        }
+        // deleted
+        if (changes.new_val === null && changes.old_val) {
+          console.log("One of my lists was deleted", changes.old_val);
+          const deletedList = changes.old_val as List;
 
-        // Remove list from local state
-        if (!listsStore.lists) return;
+          // Remove list from local state
+          if (!listsStore.lists) return;
 
-        listsStore.lists = listsStore.lists.filter((list) => list.id !== deletedList.id);
-      }
-      // updated
-      if (changes.new_val && changes.old_val) {
-        console.log("Updated", changes.new_val);
-        const updatedList = changes.new_val as List;
+          listsStore.lists = listsStore.lists.filter((list) => list.id !== deletedList.id);
+        }
+        // updated
+        if (changes.new_val && changes.old_val) {
+          console.log("Updated", changes.new_val);
+          const updatedList = changes.new_val as List;
 
-        if (!listsStore.lists) return;
+          if (!listsStore.lists) return;
 
-        listsStore.lists = listsStore.lists.map((list) => {
-          if (list.id === updatedList.id) {
-            return updatedList;
-          }
-          return list;
-        });
-      }
-    });
-    // Subscribe to shared with me lists table changes
+          listsStore.lists = listsStore.lists.map((list) => {
+            if (list.id === updatedList.id) {
+              return updatedList;
+            }
+            return list;
+          });
+        }
+      });
+    }
 
     if (listsStore.lists === null) return;
     loading.value = false;
@@ -164,6 +169,7 @@ onMounted(() => {
         </RouterLink>
 
         <div class="header-region-right">
+          <div v-if="!online" class="offline header-text-item">Offline</div>
           <template v-if="!userStore.loggedIn">
             <button @click="rid.login()" class="header-button link-button">Get Started</button>
             <button @click="rid.login()" class="header-button link-button">Sign In</button>
@@ -311,5 +317,11 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.offline {
+  background: #069867;
+  text-transform: uppercase;
+  font-style: bold;
 }
 </style>

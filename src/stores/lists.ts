@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { useUserStore } from "@/stores/user";
-import type { List, NewList, ListItem, OrderTableDoc, ContentSharer } from "@/types";
+import type { List, NewList, ListItem, OrderTableDoc, ContentSharer, DataConfig } from "@/types";
 import {
   listsTable,
   orderTable,
@@ -8,6 +8,11 @@ import {
   contentSharersTable,
   SETTINGS_TABLE_NAME,
   SETTING_USERNAME,
+  getAPIOrLocalData,
+  createDataConfig,
+  listsConfig,
+  listsOrderDocConfig,
+  contentSharersConfig,
 } from "@/rethinkid";
 import type { TableAPI } from "@rethinkid/rethinkid-js-sdk";
 import { v4 as uuidv4 } from "uuid";
@@ -39,7 +44,7 @@ export const useListsStore = defineStore("lists", {
       if (!this.lists) this.lists = [];
 
       try {
-        this.contentSharers = (await contentSharersTable.read()) as ContentSharer[];
+        this.contentSharers = (await getAPIOrLocalData(contentSharersConfig)) as ContentSharer[];
 
         for (const sharer of this.contentSharers) {
           console.log("sharer", sharer);
@@ -49,7 +54,11 @@ export const useListsStore = defineStore("lists", {
             // Get content sharer username:
             // Fetch from `username` row of `settings` table of hostId
             const sharerSettingsTable = rid.table(SETTINGS_TABLE_NAME, { userId: hostId });
-            const usernameRow = (await sharerSettingsTable.read({ rowId: SETTING_USERNAME })) as {
+            const usernameRowConfig = createDataConfig(
+              () => sharerSettingsTable.read({ rowId: SETTING_USERNAME }),
+              `usernameRow_${hostId}`,
+            );
+            const usernameRow = (await getAPIOrLocalData(usernameRowConfig)) as {
               id: string;
               value: string;
             };
@@ -63,8 +72,8 @@ export const useListsStore = defineStore("lists", {
 
           // Get shared lists
           const sharedListsTable = rid.table(LISTS_TABLE_NAME, { userId: hostId }) as TableAPI;
-
-          const sharedLists = (await sharedListsTable.read()) as List[];
+          const sharedListsConfig = createDataConfig(() => sharedListsTable.read(), `sharedLists_${hostId}`);
+          const sharedLists = (await getAPIOrLocalData(sharedListsConfig)) as List[];
 
           if (!sharedLists || (sharedLists && sharedLists.length === 0)) return;
 
@@ -73,38 +82,40 @@ export const useListsStore = defineStore("lists", {
           }
 
           // Subscribe
-          sharedListsTable.subscribe({}, (changes) => {
-            console.log("Subscribe changers for host ID:", hostId);
+          if (window.navigator.onLine) {
+            sharedListsTable.subscribe({}, (changes) => {
+              console.log("Subscribe changers for host ID:", hostId);
 
-            //  added
-            if (changes.new_val && changes.old_val === null) {
-              console.log("Added", changes.new_val);
-            }
-            // deleted
-            if (changes.new_val === null && changes.old_val) {
-              console.log("A list shared with me was deleted", changes.old_val);
-              const deletedList = changes.old_val as List;
+              //  added
+              if (changes.new_val && changes.old_val === null) {
+                console.log("Added", changes.new_val);
+              }
+              // deleted
+              if (changes.new_val === null && changes.old_val) {
+                console.log("A list shared with me was deleted", changes.old_val);
+                const deletedList = changes.old_val as List;
 
-              // Remove list from local state
-              if (!this.lists) return;
+                // Remove list from local state
+                if (!this.lists) return;
 
-              this.lists = this.lists.filter((list) => list.id !== deletedList.id);
-            }
-            // updated
-            if (changes.new_val && changes.old_val) {
-              console.log("Updated", changes.new_val);
-              const updatedList = changes.new_val as List;
+                this.lists = this.lists.filter((list) => list.id !== deletedList.id);
+              }
+              // updated
+              if (changes.new_val && changes.old_val) {
+                console.log("Updated", changes.new_val);
+                const updatedList = changes.new_val as List;
 
-              if (!this.lists) return;
+                if (!this.lists) return;
 
-              this.lists = this.lists.map((list) => {
-                if (list.id === updatedList.id) {
-                  return updatedList;
-                }
-                return list;
-              });
-            }
-          });
+                this.lists = this.lists.map((list) => {
+                  if (list.id === updatedList.id) {
+                    return updatedList;
+                  }
+                  return list;
+                });
+              }
+            });
+          }
         }
       } catch (e) {
         console.log("fetchContentSharedWithMe error", e);
@@ -113,7 +124,7 @@ export const useListsStore = defineStore("lists", {
     async fetchLists(): Promise<void> {
       let lists = [] as List[];
       try {
-        lists = (await listsTable.read()) as List[];
+        lists = (await getAPIOrLocalData(listsConfig)) as List[];
       } catch (e) {
         console.log("read lists error", e);
       }
@@ -127,7 +138,7 @@ export const useListsStore = defineStore("lists", {
 
       let listsOrderDoc = null;
       try {
-        listsOrderDoc = (await orderTable.read({ rowId: LISTS_TABLE_NAME })) as OrderTableDoc;
+        listsOrderDoc = (await getAPIOrLocalData(listsOrderDocConfig)) as OrderTableDoc;
       } catch (e) {
         console.log("error reading order", e);
       }
@@ -280,8 +291,6 @@ export const useListsStore = defineStore("lists", {
     },
   },
   getters: {
-    // Use user ID if username not available
-    // TODO
     getSharerUsername: (state): ((userId: string) => string) => {
       return (userId: string) => {
         const sharer = state.contentSharers?.find((sharer) => sharer.id === userId);

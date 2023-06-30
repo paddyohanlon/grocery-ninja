@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from "vue";
 import type { Ref } from "vue";
-import { rid } from "@/rethinkid";
+import { rid, getAPIOrLocalData, contactsListConfig, createDataConfig } from "@/rethinkid";
 import { STATE_CHANGE_DURATION_MS } from "@/timing";
 import type { Contact, Message, ConnectionRequest } from "@rethinkid/rethinkid-js-sdk";
 import { useNotificationsStore } from "@/stores/notifications";
@@ -29,10 +29,9 @@ const addButtonText = ref(addButtonTextInitial);
  */
 const contacts: Ref<Contact[]> = ref([]);
 
-function fetchContacts() {
-  rid.contacts.list().then((contactsList) => {
-    contacts.value = contactsList;
-  });
+async function fetchContacts() {
+  const contactsList = await getAPIOrLocalData(contactsListConfig);
+  contacts.value = contactsList;
 }
 fetchContacts();
 
@@ -45,9 +44,12 @@ const sentConnectionRequests: Ref<SentConnectionRequest[]> = ref([]);
 const sentConnectionRequestsTable = rid.table("sent_connection_requests");
 
 // Fetch sent connection requests
-sentConnectionRequestsTable.read().then((requests) => {
+async function fetchConnectionRequests() {
+  const connectionRequestsConfig = createDataConfig(() => sentConnectionRequestsTable.read(), "connectionRequests");
+  const requests = await getAPIOrLocalData(connectionRequestsConfig);
   sentConnectionRequests.value = requests as SentConnectionRequest[];
-});
+}
+fetchConnectionRequests();
 
 /**
  * Received connection requests
@@ -195,52 +197,54 @@ function isConnectionRequestSent(contactId: string): boolean {
 
 let unsubscribe: null | (() => Promise<Message>) = null;
 
-rid.contacts
-  .subscribe(async (changes) => {
-    //  added
-    if (changes.new_val && changes.old_val === null) {
-      console.log("Added new contact", changes.new_val);
-      notificationsStore.addNotification("Contact added.");
-      const newContact = changes.new_val as Contact;
+if (window.navigator.onLine) {
+  rid.contacts
+    .subscribe(async (changes) => {
+      //  added
+      if (changes.new_val && changes.old_val === null) {
+        console.log("Added new contact", changes.new_val);
+        notificationsStore.addNotification("Contact added.");
+        const newContact = changes.new_val as Contact;
 
-      await listsStore.addContentSharer(newContact.contactId);
+        await listsStore.addContentSharer(newContact.contactId);
 
-      contacts.value.push(newContact);
+        contacts.value.push(newContact);
 
-      // remove pending connection from database and store
-      const index = sentConnectionRequests.value.findIndex((request) => request.id === newContact.contactId);
+        // remove pending connection from database and store
+        const index = sentConnectionRequests.value.findIndex((request) => request.id === newContact.contactId);
 
-      if (index === -1) return;
+        if (index === -1) return;
 
-      sentConnectionRequestsTable.delete({ rowId: sentConnectionRequests.value[index].id });
+        sentConnectionRequestsTable.delete({ rowId: sentConnectionRequests.value[index].id });
 
-      sentConnectionRequests.value.splice(index, 1);
-    }
-    // deleted
-    if (changes.new_val === null && changes.old_val) {
-      console.log("Deleted contact", changes.old_val);
-      notificationsStore.addNotification("Contact deleted.");
-    }
-    // updated
-    if (changes.new_val && changes.old_val) {
-      console.log("Updated contact", changes.new_val);
-      notificationsStore.addNotification("Contact updated.");
-      const updatedContact = changes.new_val as Contact;
-      const index = contacts.value.findIndex((contact) => contact.id === updatedContact.id);
+        sentConnectionRequests.value.splice(index, 1);
+      }
+      // deleted
+      if (changes.new_val === null && changes.old_val) {
+        console.log("Deleted contact", changes.old_val);
+        notificationsStore.addNotification("Contact deleted.");
+      }
+      // updated
+      if (changes.new_val && changes.old_val) {
+        console.log("Updated contact", changes.new_val);
+        notificationsStore.addNotification("Contact updated.");
+        const updatedContact = changes.new_val as Contact;
+        const index = contacts.value.findIndex((contact) => contact.id === updatedContact.id);
 
-      if (index === -1) return;
+        if (index === -1) return;
 
-      contacts.value[index] = updatedContact;
+        contacts.value[index] = updatedContact;
 
-      // remove now connected contacts from sent requests list
-      sentConnectionRequests.value = sentConnectionRequests.value.filter(
-        (request) => !(request.id === updatedContact.contactId && updatedContact.connected),
-      );
-    }
-  })
-  .then((response) => {
-    unsubscribe = response;
-  });
+        // remove now connected contacts from sent requests list
+        sentConnectionRequests.value = sentConnectionRequests.value.filter(
+          (request) => !(request.id === updatedContact.contactId && updatedContact.connected),
+        );
+      }
+    })
+    .then((response) => {
+      unsubscribe = response;
+    });
+}
 
 onUnmounted(() => {
   if (unsubscribe) {

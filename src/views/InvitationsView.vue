@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { rid } from "@/rethinkid";
+import { rid, getAPIOrLocalData, contactsListConfig, createDataConfig } from "@/rethinkid";
 import { ref, onUnmounted, computed } from "vue";
 import type { Ref } from "vue";
 import type {
@@ -34,10 +34,9 @@ function listNameById(listId: string) {
  */
 const contacts: Ref<Contact[]> = ref([]);
 
-function fetchContacts() {
-  rid.contacts.list().then((contactsList) => {
-    contacts.value = contactsList;
-  });
+async function fetchContacts() {
+  const contactsList = await getAPIOrLocalData(contactsListConfig);
+  contacts.value = contactsList;
 }
 fetchContacts();
 
@@ -46,9 +45,12 @@ fetchContacts();
  */
 const permissions: Ref<Permission[]> = ref([]);
 
-rid.permissions.get().then((response) => {
-  permissions.value = response;
-});
+async function fetchPermissions() {
+  const permissionsConfig = createDataConfig(() => rid.permissions.get(), "permissions");
+  const data = await getAPIOrLocalData(permissionsConfig);
+  permissions.value = data;
+}
+fetchPermissions();
 
 /**
  * Sent Invitations
@@ -56,7 +58,12 @@ rid.permissions.get().then((response) => {
 const sentInvitations: Ref<Invitation[]> = ref([]);
 
 async function fetchInvitations() {
-  sentInvitations.value = await rid.invitations.list({ includeAccepted: true });
+  const sentInvitationsConfig = createDataConfig(
+    () => rid.invitations.list({ includeAccepted: true }),
+    "sentInvitations",
+  );
+  const data = await getAPIOrLocalData(sentInvitationsConfig);
+  sentInvitations.value = data;
 }
 fetchInvitations();
 
@@ -96,9 +103,15 @@ const acceptedReceivedInvitations: Ref<AcceptedReceivedInvitation[]> = ref([]);
 const acceptedReceivedInvitationsTable = rid.table("accepted_received_invitation");
 
 // Fetch accepted received invitations IDs
-acceptedReceivedInvitationsTable.read().then((ids) => {
-  acceptedReceivedInvitations.value = ids as AcceptedReceivedInvitation[];
-});
+async function fetchAcceptedReceivedInvitations() {
+  const acceptedReceivedInvitationsConfig = createDataConfig(
+    () => acceptedReceivedInvitationsTable.read(),
+    "acceptedReceivedInvitations",
+  );
+  const data = await getAPIOrLocalData(acceptedReceivedInvitationsConfig);
+  acceptedReceivedInvitations.value = data as AcceptedReceivedInvitation[];
+}
+fetchAcceptedReceivedInvitations();
 
 function isAcceptedReceivedInvitation(receivedInvitationId: string) {
   return acceptedReceivedInvitations.value.some((invitation) => invitation.id === receivedInvitationId);
