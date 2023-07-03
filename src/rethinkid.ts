@@ -149,7 +149,7 @@ function replaceListLocal(updatedList: List) {
   const listsJSONString = localStorage.getItem(LISTS_LOCAL_ITEM_NAME);
   if (!listsJSONString) return null;
   const lists = getLocalData(LISTS_LOCAL_ITEM_NAME) as List[];
-  console.log("offline: replace list in localStorage:", updatedList.name);
+  console.log("replace list in localStorage:", updatedList.name);
   const updatedLists = lists.map((list) => (list.id === updatedList.id ? updatedList : list));
   localStorage.setItem(LISTS_LOCAL_ITEM_NAME, JSON.stringify(updatedLists));
 }

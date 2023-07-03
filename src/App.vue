@@ -22,8 +22,8 @@ const notificationsStore = useNotificationsStore();
 
 const online = ref(window.navigator.onLine);
 window.addEventListener("online", () => {
-  online.value = true;
-  syncData().then(() => listsStore.removeNeedsSync());
+  // online.value = true;
+  // syncData().then(() => listsStore.removeNeedsSync());
 });
 window.addEventListener("offline", () => (online.value = false));
 
