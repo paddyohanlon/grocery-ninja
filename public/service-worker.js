@@ -5,6 +5,8 @@ const urlsToCache = [
   /* populated by update-service-worker.js */
 ];
 
+// TODO clean up old files, or old cache...
+
 const cacheList = [staticCacheName];
 
 self.addEventListener("install", (installEvent) => {

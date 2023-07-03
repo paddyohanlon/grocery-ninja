@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import type { Ref } from "vue";
 import { useListsStore } from "@/stores/lists";
 import { useUserStore } from "@/stores/user.js";
@@ -130,6 +130,7 @@ function submitUpdateList() {
               <div v-if="list.hostId !== userStore.userId" class="shared-by">
                 Shared by <strong>{{ listsStore.getSharerUsername(list.hostId) }}</strong>
               </div>
+              <div v-if="list.needsSync" class="shared-by">Needs Sync</div>
             </div>
 
             <div class="list-actions">
@@ -249,7 +250,11 @@ function submitUpdateList() {
                   :class="{ 'is-active': itemIdParam === item.id }"
                   class="item"
                 >
-                  <CheckItemButton :listId="listIdParam" :item="item" @item-check-toggled="focusElement(addItemButton)" />
+                  <CheckItemButton
+                    :listId="listIdParam"
+                    :item="item"
+                    @item-check-toggled="focusElement(addItemButton)"
+                  />
                   <RouterLink :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }">
                     {{ item.name }}
                   </RouterLink>

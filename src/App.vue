@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { RouterLink, RouterView } from "vue-router";
-import { listsTable, rid } from "@/rethinkid";
+import { listsTable, rid, syncData } from "@/rethinkid";
 import { useUserStore } from "@/stores/user.js";
 import { useListsStore } from "@/stores/lists";
 import { useNotificationsStore } from "@/stores/notifications";
@@ -12,12 +12,6 @@ import type { List } from "@/types";
 const router = useRouter();
 const route = useRoute();
 
-console.log("initial window.navigator.onLine", window.navigator.onLine);
-
-const online = ref(window.navigator.onLine);
-window.addEventListener("online", () => (online.value = true));
-window.addEventListener("offline", () => (online.value = false));
-
 const loading = ref(true);
 
 const accountDropdownIsVisible = ref(false);
@@ -25,6 +19,13 @@ const accountDropdownIsVisible = ref(false);
 const userStore = useUserStore();
 const listsStore = useListsStore();
 const notificationsStore = useNotificationsStore();
+
+const online = ref(window.navigator.onLine);
+window.addEventListener("online", () => {
+  online.value = true;
+  syncData().then(() => listsStore.removeNeedsSync());
+});
+window.addEventListener("offline", () => (online.value = false));
 
 async function onLogin() {
   userStore.setLoggedIn(true);
@@ -56,53 +57,63 @@ async function onLogin() {
     router.push({ name: SETTINGS });
   }
 
-  listsStore.fetchLists().then(async () => {
-    await listsStore.fetchContentSharedWithMe();
+  syncData()
+    .then(() => {
+      console.log("Just did syncData");
+      return listsStore.fetchLists();
+    })
+    .then(() => {
+      console.log("Just did fetchLists");
+      return listsStore.fetchContentSharedWithMe();
+    })
+    .then(() => {
+      console.log("Just did fetchContentSharedWithMe");
+      // Subscribe to my lists table changes
+      if (window.navigator.onLine) {
+        listsTable.subscribe({}, (changes) => {
+          //  added
+          if (changes.new_val && changes.old_val === null) {
+            console.log("Added", changes.new_val);
+          }
+          // deleted
+          if (changes.new_val === null && changes.old_val) {
+            console.log("One of my lists was deleted", changes.old_val);
+            const deletedList = changes.old_val as List;
 
-    // Subscribe to my lists table changes
-    if (window.navigator.onLine) {
-      listsTable.subscribe({}, (changes) => {
-        //  added
-        if (changes.new_val && changes.old_val === null) {
-          console.log("Added", changes.new_val);
-        }
-        // deleted
-        if (changes.new_val === null && changes.old_val) {
-          console.log("One of my lists was deleted", changes.old_val);
-          const deletedList = changes.old_val as List;
+            // Remove list from local state
+            if (!listsStore.lists) return;
 
-          // Remove list from local state
-          if (!listsStore.lists) return;
+            listsStore.lists = listsStore.lists.filter((list) => list.id !== deletedList.id);
+          }
+          // updated
+          if (changes.new_val && changes.old_val) {
+            console.log("Updated", changes.new_val);
+            const updatedList = changes.new_val as List;
 
-          listsStore.lists = listsStore.lists.filter((list) => list.id !== deletedList.id);
-        }
-        // updated
-        if (changes.new_val && changes.old_val) {
-          console.log("Updated", changes.new_val);
-          const updatedList = changes.new_val as List;
+            if (!listsStore.lists) return;
 
-          if (!listsStore.lists) return;
+            listsStore.lists = listsStore.lists.map((list) => {
+              if (list.id === updatedList.id) {
+                return updatedList;
+              }
+              return list;
+            });
+          }
+        });
+      }
 
-          listsStore.lists = listsStore.lists.map((list) => {
-            if (list.id === updatedList.id) {
-              return updatedList;
-            }
-            return list;
-          });
-        }
-      });
-    }
+      if (listsStore.lists === null) return;
+      loading.value = false;
 
-    if (listsStore.lists === null) return;
-    loading.value = false;
+      // Redirect the home route to the primary list
+      if (route.name !== HOME) return;
 
-    // Redirect the home route to the primary list
-    if (route.name !== HOME) return;
+      const primaryListId = userStore.primaryListId;
+      if (!primaryListId) return;
+      router.push({ name: LIST, params: { listId: primaryListId } });
 
-    const primaryListId = userStore.primaryListId;
-    if (!primaryListId) return;
-    router.push({ name: LIST, params: { listId: primaryListId } });
-  });
+      console.log("Just did subscribe, loading done, go to primary list.");
+    });
 }
 
 function goToFromAccountDropdown(routeName: string) {

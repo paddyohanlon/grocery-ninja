@@ -5,6 +5,7 @@ export interface List {
   archived: boolean;
   userIDsWithAccess: string[];
   hostId: string;
+  needsSync?: boolean;
 }
 
 export interface ContentSharer {
@@ -29,7 +30,12 @@ export interface OrderTableDoc {
   order: string[]; // doc IDs
 }
 
-export type DataConfig = {
-  APICall: () => Promise<any>;
+export type ReadDataConfig = {
+  APICallClosure: () => Promise<any>;
   localItemName: string;
+};
+
+export type ReplaceDataConfig = {
+  APICallClosure: () => Promise<any>;
+  payload: any;
 };

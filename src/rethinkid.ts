@@ -1,6 +1,6 @@
 import { RethinkID, TableAPI } from "@rethinkid/rethinkid-js-sdk";
 import type { Options } from "@rethinkid/rethinkid-js-sdk";
-import type { List, DataConfig } from "@/types";
+import type { List, ReadDataConfig } from "@/types";
 
 const config: Options = {
   appId: import.meta.env.VITE_RETHINKID_APP_ID,
@@ -106,24 +106,68 @@ export async function getOwnedOrSharedListsTable(list: List): Promise<TableAPI> 
 
 // Data fetch config
 
-export async function getAPIOrLocalData({ APICall, localItemName }: DataConfig): Promise<any> {
+export function getLocalData(localItemName: string): any {
+  const dataJSONString = localStorage.getItem(localItemName);
+  if (!dataJSONString) return null;
+  return JSON.parse(dataJSONString);
+}
+
+export async function getAPIOrLocalData({ APICallClosure, localItemName }: ReadDataConfig): Promise<any> {
   console.log("Get", localItemName);
   if (window.navigator.onLine) {
-    const data = await APICall();
+    const data = await APICallClosure();
     localStorage.setItem(localItemName, JSON.stringify(data));
     console.log("online: get from API:", data);
     return data;
   }
-  const dataJSONString = localStorage.getItem(localItemName);
-  if (!dataJSONString) return null;
-  const data = JSON.parse(dataJSONString);
+  const data = getLocalData(localItemName);
   console.log("offline: get from localStorage:", data);
   return data;
 }
 
-export function createDataConfig(APICall: () => Promise<any>, localItemName: string): DataConfig {
+export const LISTS_LOCAL_ITEM_NAME = "lists";
+
+export async function syncData() {
+  if (!window.navigator.onLine) return null;
+  console.log("Sync data");
+  const localLists = getLocalData(LISTS_LOCAL_ITEM_NAME) as List[];
+  for (const list of localLists) {
+    if (list.needsSync) {
+      delete list.needsSync;
+      await replaceListAPI(list);
+    }
+  }
+}
+
+export async function replaceListAPI(list: List) {
+  const listsTable = await getOwnedOrSharedListsTable(list);
+  listsTable.replace(list);
+  await replaceListLocal(list);
+}
+
+function replaceListLocal(updatedList: List) {
+  const listsJSONString = localStorage.getItem(LISTS_LOCAL_ITEM_NAME);
+  if (!listsJSONString) return null;
+  const lists = getLocalData(LISTS_LOCAL_ITEM_NAME) as List[];
+  console.log("offline: replace list in localStorage:", updatedList.name);
+  const updatedLists = lists.map((list) => (list.id === updatedList.id ? updatedList : list));
+  localStorage.setItem(LISTS_LOCAL_ITEM_NAME, JSON.stringify(updatedLists));
+}
+
+export async function replaceListAPIOrLocalData(list: List) {
+  if (window.navigator.onLine) {
+    console.log("replace online");
+    await replaceListAPI(list);
+    return;
+  }
+  console.log("replace offline");
+  list.needsSync = true;
+  replaceListLocal(list);
+}
+
+export function createDataConfig(APICallClosure: () => Promise<any>, localItemName: string): ReadDataConfig {
   const dataConfig = {
-    APICall,
+    APICallClosure,
     localItemName,
   };
   Object.freeze(dataConfig);
@@ -132,7 +176,7 @@ export function createDataConfig(APICall: () => Promise<any>, localItemName: str
 
 export const userInfoConfig = createDataConfig(() => rid.users.getInfo(), "userInfo");
 export const settingsConfig = createDataConfig(() => settingsTable.read(), "settings");
-export const listsConfig = createDataConfig(() => listsTable.read(), "lists");
+export const listsConfig = createDataConfig(() => listsTable.read(), LISTS_LOCAL_ITEM_NAME);
 export const listsOrderDocConfig = createDataConfig(
   () => orderTable.read({ rowId: LISTS_TABLE_NAME }),
   "listsOrderDoc",

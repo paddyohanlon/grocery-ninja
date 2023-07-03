@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { useUserStore } from "@/stores/user";
-import type { List, NewList, ListItem, OrderTableDoc, ContentSharer, DataConfig } from "@/types";
+import type { List, NewList, ListItem, OrderTableDoc, ContentSharer } from "@/types";
 import {
   listsTable,
   orderTable,
@@ -13,6 +13,7 @@ import {
   listsConfig,
   listsOrderDocConfig,
   contentSharersConfig,
+  replaceListAPIOrLocalData,
 } from "@/rethinkid";
 import type { TableAPI } from "@rethinkid/rethinkid-js-sdk";
 import { v4 as uuidv4 } from "uuid";
@@ -240,6 +241,13 @@ export const useListsStore = defineStore("lists", {
         userStore.updatePrimaryListId(this.listsOrder[0]);
       }
     },
+    removeNeedsSync(): void {
+      console.log("removeNeedsSync");
+      if (!this.lists) return;
+      for (const list of this.lists) {
+        if (list.needsSync) delete list.needsSync;
+      }
+    },
     async addItem(listId: string, itemName: string): Promise<void> {
       const list = this.getList(listId);
 
@@ -257,8 +265,7 @@ export const useListsStore = defineStore("lists", {
 
       list.items.push(newItem);
 
-      const listsTable = await getOwnedOrSharedListsTable(list);
-      listsTable.update(list);
+      await replaceListAPIOrLocalData(list);
     },
     async updateItem(listId: string, updatedItem: ListItem) {
       const list = this.getList(listId);
@@ -272,8 +279,7 @@ export const useListsStore = defineStore("lists", {
         return item;
       });
 
-      const listsTable = await getOwnedOrSharedListsTable(list);
-      listsTable.update(list);
+      await replaceListAPIOrLocalData(list);
     },
     async deleteItem(listId: string, itemId: string) {
       const list = this.getList(listId);
@@ -283,8 +289,7 @@ export const useListsStore = defineStore("lists", {
       list.items = list.items.filter((item) => item.id !== itemId);
 
       try {
-        const listsTable = await getOwnedOrSharedListsTable(list);
-        await listsTable.replace(list);
+        await replaceListAPIOrLocalData(list);
       } catch (e) {
         console.log("error deleting item", e);
       }
