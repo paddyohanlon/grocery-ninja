@@ -53,7 +53,9 @@ async function createAndGoToList() {
               width="16"
               height="16"
             />
-            <span v-if="list.items.length">{{ list.items.length }}</span>
+            <span v-if="listsStore.getUncheckedItems(listIdParam).length">{{
+              listsStore.getUncheckedItems(listIdParam).length
+            }}</span>
           </span>
         </RouterLink>
       </li>
