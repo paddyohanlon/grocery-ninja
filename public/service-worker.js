@@ -5,8 +5,6 @@ const urlsToCache = [
   /* populated by update-service-worker.js */
 ];
 
-// TODO clean up old files, or old cache...
-
 const cacheList = [staticCacheName];
 
 self.addEventListener("install", (installEvent) => {
@@ -17,9 +15,13 @@ self.addEventListener("install", (installEvent) => {
 
   installEvent.waitUntil(
     caches.open(staticCacheName).then((cache) => {
-      // console.log("SW: static cache, add all URLs");
-
-      return cache.addAll(urlsToCache);
+      // console.log("SW: Deleting old cache items");
+      return cache.keys().then((requests) => {
+        return Promise.all(requests.map((request) => cache.delete(request))).then(() => {
+          // console.log("SW: static cache, add all URLs");
+          return cache.addAll(urlsToCache);
+        });
+      });
     }),
   );
 });
