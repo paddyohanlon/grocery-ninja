@@ -22,8 +22,27 @@ const notificationsStore = useNotificationsStore();
 
 const online = ref(window.navigator.onLine);
 window.addEventListener("online", () => {
-  // online.value = true;
-  // syncData().then(() => listsStore.removeNeedsSync());
+  online.value = true;
+
+  // poll till connected
+  function pollConnectSync() {
+    console.log("pollConnectSync");
+    rid.tables
+      .list()
+      .then((res) => {
+        console.log("sync poll list tables res", res);
+        console.log("Could list tables, we're connected. Sync!");
+        syncData();
+      })
+      .catch((e) => {
+        console.log("sync poll list tables error, re-try in a bit", e.message);
+        setTimeout(() => {
+          console.log("retry");
+          pollConnectSync();
+        }, 500);
+      });
+  }
+  pollConnectSync();
 });
 window.addEventListener("offline", () => (online.value = false));
 
@@ -180,7 +199,7 @@ onMounted(() => {
         </RouterLink>
 
         <div class="header-region-right">
-          <div v-if="!online" class="offline header-text-item">Offline</div>
+          <div v-if="!online" class="header-item-highlight header-text-item">Offline</div>
           <template v-if="!userStore.loggedIn">
             <button @click="rid.login()" class="header-button link-button">Get Started</button>
             <button @click="rid.login()" class="header-button link-button">Sign In</button>
@@ -330,7 +349,7 @@ onMounted(() => {
   text-overflow: ellipsis;
 }
 
-.offline {
+.header-item-highlight {
   background: #069867;
   text-transform: uppercase;
   font-style: bold;
