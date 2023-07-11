@@ -130,7 +130,11 @@ export const LISTS_LOCAL_ITEM_NAME = "lists";
 export async function syncData() {
   if (!window.navigator.onLine) return null;
   console.log("Sync data");
-  const localLists = getLocalData(LISTS_LOCAL_ITEM_NAME) as List[];
+  const localLists = getLocalData(LISTS_LOCAL_ITEM_NAME) as List[] | null;
+  if (!localLists) {
+    console.log("No local data");
+    return;
+  }
   for (const list of localLists) {
     if (list.needsSync) {
       delete list.needsSync;
