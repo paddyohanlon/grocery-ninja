@@ -32,7 +32,7 @@ window.addEventListener("online", () => {
       .then((res) => {
         console.log("sync poll list tables res", res);
         console.log("Could list tables, we're connected. Sync!");
-        syncData();
+        syncData().then(() => listsStore.removeNeedsSync());
       })
       .catch((e) => {
         console.log("sync poll list tables error, re-try in a bit", e.message);
