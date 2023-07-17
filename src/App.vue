@@ -47,6 +47,7 @@ window.addEventListener("online", () => {
 window.addEventListener("offline", () => (online.value = false));
 
 async function onLogin() {
+  console.log("do onLogin");
   userStore.setLoggedIn(true);
 
   await userStore.fetchUserInfo();
