@@ -8,11 +8,6 @@ export interface List {
   needsSync?: boolean;
 }
 
-export interface ContentSharer {
-  id: string; // host user ID
-  username: string;
-}
-
 export type NewList = Omit<List, "id">;
 
 export interface ListItem {

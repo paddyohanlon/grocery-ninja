@@ -6,7 +6,7 @@ import { useUserStore } from "@/stores/user.js";
 import { useListsStore } from "@/stores/lists";
 import { useNotificationsStore } from "@/stores/notifications";
 import { useRouter, useRoute } from "vue-router";
-import { HOME, CONTACTS, LIST, INVITATIONS, SETTINGS } from "@/router/route-names";
+import { HOME, CONTACTS, LIST, SHARING } from "@/router/route-names";
 import type { List } from "@/types";
 
 const router = useRouter();
@@ -47,56 +47,71 @@ window.addEventListener("online", () => {
 window.addEventListener("offline", () => (online.value = false));
 
 async function onLogin() {
-  console.log("do onLogin");
   userStore.setLoggedIn(true);
+
+  rid.sharing.onShared((val) => {
+    console.log("onShared fired", val);
+  });
 
   await userStore.fetchUserInfo();
   await userStore.fetchSettings();
-
-  /**
-   * Auto-handle invitations
-   */
-  rid.invitations.onAccepted(() => {
-    if (userStore.autoHandleInvitations) {
-      console.log("Invitation accepted and auto-handle is on, redirect and auto handle.");
-      router.push({ name: INVITATIONS });
-    }
-  });
-
-  /** Received invitations */
-  rid.invitations.onReceived(() => {
-    notificationsStore.addNotification("Invitation received.");
-  });
 
   // Receive contact connection requests
   rid.contacts.onConnectionRequest(() => {
     notificationsStore.addNotification("Contact connection request received.");
   });
 
-  if (!userStore.username) {
-    router.push({ name: SETTINGS });
+  type Changes = {
+    new_val: null | object;
+    old_val: null | object;
+  };
+
+  // Plugin funcs
+  // function onAdded(callback: () => void) {
+  //   return callback();
+  // }
+  // function onDeleted(callback: () => void) {
+  //   return callback();
+  // }
+  // function onUpdated(callback: () => void) {
+  //   return callback();
+  // }
+
+  function isAddedChange(changes: Changes) {
+    return changes.new_val && changes.old_val === null;
   }
+  function isDeletedChange(changes: Changes) {
+    return changes.new_val === null && changes.old_val;
+  }
+  function isUpdateChange(changes: Changes) {
+    return changes.new_val && changes.old_val;
+  }
+
+  // function subscribeHelper(changes: Changes): void {
+  //   if (isAddedChange(changes)) {
+  //   }
+  //   if (isDeletedChange(changes)) {
+  //   }
+  //   if (isUpdateChange(changes)) {
+  //   }
+  // }
+  // End plugin funcs
 
   syncData()
     .then(() => {
-      console.log("Just did syncData");
       return listsStore.fetchLists();
     })
     .then(() => {
-      console.log("Just did fetchLists");
-      return listsStore.fetchContentSharedWithMe();
+      // return listsStore.fetchSharedLists();
     })
     .then(() => {
-      console.log("Just did fetchContentSharedWithMe");
       // Subscribe to my lists table changes
       if (window.navigator.onLine) {
         listsTable.subscribe({}, (changes) => {
-          //  added
-          if (changes.new_val && changes.old_val === null) {
+          if (isAddedChange(changes)) {
             console.log("Added", changes.new_val);
           }
-          // deleted
-          if (changes.new_val === null && changes.old_val) {
+          if (isDeletedChange(changes)) {
             console.log("One of my lists was deleted", changes.old_val);
             const deletedList = changes.old_val as List;
 
@@ -105,8 +120,7 @@ async function onLogin() {
 
             listsStore.lists = listsStore.lists.filter((list) => list.id !== deletedList.id);
           }
-          // updated
-          if (changes.new_val && changes.old_val) {
+          if (isUpdateChange(changes)) {
             console.log("Updated", changes.new_val);
             const updatedList = changes.new_val as List;
 
@@ -131,8 +145,6 @@ async function onLogin() {
       const primaryListId = userStore.primaryListId;
       if (!primaryListId) return;
       router.push({ name: LIST, params: { listId: primaryListId } });
-
-      console.log("Just did subscribe, loading done, go to primary list.");
     });
 }
 
@@ -146,7 +158,7 @@ if (rid.isLoggedIn()) {
 } else {
   loading.value = false;
 
-  rid.onLogin(() => {
+  rid.onLogin(async () => {
     onLogin();
   });
 }
@@ -206,7 +218,7 @@ onMounted(() => {
             <button @click="rid.login()" class="header-button link-button">Sign In</button>
           </template>
           <template v-else>
-            <div class="header-text-item">{{ userStore.username }}</div>
+            <div class="header-text-item">{{ userStore.userId }}</div>
             <button
               @click.stop="toggleAccountDropdown"
               class="header-button link-button"
@@ -241,8 +253,7 @@ onMounted(() => {
                   </button>
                 </li>
                 <li><button @click="goToFromAccountDropdown(CONTACTS)" class="link-button">Contacts</button></li>
-                <li><button @click="goToFromAccountDropdown(INVITATIONS)" class="link-button">Invitations</button></li>
-                <li><button @click="goToFromAccountDropdown(SETTINGS)" class="link-button">Settings</button></li>
+                <li><button @click="goToFromAccountDropdown(SHARING)" class="link-button">Sharing</button></li>
                 <li><button @click="rid.logOut()" class="link-button">Sign out</button></li>
               </ul>
             </div>

@@ -4,7 +4,7 @@ import type { Ref } from "vue";
 import { useListsStore } from "@/stores/lists";
 import { useUserStore } from "@/stores/user.js";
 import { useRoute, useRouter } from "vue-router";
-import { HOME, INVITATIONS, LISTS, LIST_ITEM } from "@/router/route-names";
+import { HOME, LISTS, LIST_ITEM, SHARING } from "@/router/route-names";
 import ListsNav from "@/components/ListsNav.vue";
 import CheckItemButton from "@/components/CheckItemButton.vue";
 import { STATE_CHANGE_DURATION_MS } from "@/timing";
@@ -128,7 +128,7 @@ function submitUpdateList() {
                 <button class="screen-reader-text">Update</button>
               </form>
               <div v-if="list.hostId !== userStore.userId" class="shared-by">
-                Shared by <strong>{{ listsStore.getSharerUsername(list.hostId) }}</strong>
+                Shared by <strong>{{ list.hostId }}</strong>
               </div>
               <div v-if="list.needsSync" class="shared-by">Needs Sync</div>
             </div>
@@ -154,7 +154,7 @@ function submitUpdateList() {
                   <li v-if="list.hostId === userStore.userId">
                     <ul class="list-dropdown-sub-list list-reset">
                       <li>
-                        <RouterLink class="button" :to="{ name: INVITATIONS, query: { listId: list.id } }"
+                        <RouterLink class="button" :to="{ name: SHARING, query: { listId: list.id } }"
                           >Share List</RouterLink
                         >
                       </li>
@@ -180,7 +180,7 @@ function submitUpdateList() {
                     <ul class="list-reset">
                       <li v-for="(userIdWithAccess, index) of list.userIDsWithAccess" :key="index">
                         <template v-if="userIdWithAccess === userStore.userId">Me</template>
-                        <template v-else>{{ listsStore.getSharerUsername(userIdWithAccess) }}</template>
+                        <template v-else>{{ userIdWithAccess }}</template>
                       </li>
                     </ul>
                   </li>

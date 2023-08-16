@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineEmits } from "vue";
+import { ref } from "vue";
 import type { PropType } from "vue";
 import { useListsStore } from "@/stores/lists";
 import type { ListItem } from "@/types";

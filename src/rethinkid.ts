@@ -1,5 +1,5 @@
 import { RethinkID, TableAPI } from "@rethinkid/rethinkid-js-sdk";
-import type { Options } from "@rethinkid/rethinkid-js-sdk";
+import type { Options, FilterObject } from "@rethinkid/rethinkid-js-sdk";
 import type { List, ReadDataConfig } from "@/types";
 
 const config: Options = {
@@ -24,79 +24,21 @@ export const rid = new RethinkID(config);
 
 export const LISTS_TABLE_NAME = "lists";
 const ORDER_TABLE_NAME = "order";
-const CONTENT_SHARERS_TABLE_NAME = "content_sharers";
 export const SETTINGS_TABLE_NAME = "settings";
 
-export const listsTable = rid.table(LISTS_TABLE_NAME, {
-  onCreate: async () => {
-    console.log("set permissions to matchUserId on userIDsWithAccess");
-    await rid.permissions.set([
-      {
-        type: "read", // private sort of
-        userId: "*",
-        tableName: LISTS_TABLE_NAME,
-        condition: {
-          matchUserId: "userIDsWithAccess",
-        },
-      },
-      {
-        type: "insert", // public with matchUserId, others must be written to first
-        userId: "*", // optional if using matchUserId
-        tableName: LISTS_TABLE_NAME,
-        condition: {
-          matchUserId: "userIDsWithAccess", // matchUserIdField
-        },
-      },
-      {
-        type: "update",
-        userId: "*",
-        tableName: LISTS_TABLE_NAME,
-        condition: {
-          matchUserId: "userIDsWithAccess",
-        },
-      },
-      {
-        type: "delete",
-        userId: "*",
-        tableName: LISTS_TABLE_NAME,
-        condition: {
-          matchUserId: "userIDsWithAccess",
-        },
-      },
-    ]);
-  },
-});
+export const listsTable = rid.table(LISTS_TABLE_NAME);
 
 export const orderTable = rid.table(ORDER_TABLE_NAME, {
   onCreate: async () => {
-    console.log("insert after create order table");
     await rid.table(ORDER_TABLE_NAME).insert({ id: LISTS_TABLE_NAME, order: [] });
   },
 });
 
-export const contentSharersTable = rid.table(CONTENT_SHARERS_TABLE_NAME);
-
-export const SETTING_USERNAME = "username";
 export const SETTING_PRIMARY_LIST_ID = "primaryListId";
-export const SETTING_AUTO_HANDLE_INVITATIONS = "autoHandleInvitations";
 
 export const settingsTable = rid.table(SETTINGS_TABLE_NAME, {
   onCreate: async () => {
-    await rid.table(SETTINGS_TABLE_NAME).insert({ id: SETTING_USERNAME, value: "" });
     await rid.table(SETTINGS_TABLE_NAME).insert({ id: SETTING_PRIMARY_LIST_ID, value: "" });
-    await rid.table(SETTINGS_TABLE_NAME).insert({ id: SETTING_AUTO_HANDLE_INVITATIONS, value: true });
-
-    // give permissions to 'username' row to userId *
-    await rid.permissions.set([
-      {
-        type: "read",
-        userId: "*",
-        tableName: SETTINGS_TABLE_NAME,
-        condition: {
-          rowId: SETTING_USERNAME,
-        },
-      },
-    ]);
   },
 });
 
@@ -113,15 +55,15 @@ export function getLocalData(localItemName: string): any {
 }
 
 export async function getAPIOrLocalData({ APICallClosure, localItemName }: ReadDataConfig): Promise<any> {
-  console.log("Get", localItemName);
+  // console.log("Get", localItemName);
   if (window.navigator.onLine) {
     const data = await APICallClosure();
     localStorage.setItem(localItemName, JSON.stringify(data));
-    console.log("online: get from API:", data);
+    // console.log("online: get from API:", data);
     return data;
   }
   const data = getLocalData(localItemName);
-  console.log("offline: get from localStorage:", data);
+  // console.log("offline: get from localStorage:", data);
   return data;
 }
 
@@ -129,7 +71,6 @@ export const LISTS_LOCAL_ITEM_NAME = "lists";
 
 export async function syncData() {
   if (!window.navigator.onLine) return null;
-  console.log("Sync data");
   const localLists = getLocalData(LISTS_LOCAL_ITEM_NAME) as List[] | null;
   if (!localLists) {
     console.log("No local data");
@@ -185,5 +126,38 @@ export const listsOrderDocConfig = createDataConfig(
   () => orderTable.read({ rowId: LISTS_TABLE_NAME }),
   "listsOrderDoc",
 );
-export const contentSharersConfig = createDataConfig(() => contentSharersTable.read(), "contentSharers");
 export const contactsListConfig = createDataConfig(() => rid.contacts.list(), "contactsList");
+
+// Enhanced subscribe
+
+type Changes = {
+  new_val: null | object;
+  old_val: null | object;
+};
+
+type Handlers = {
+  onAdd?: (item: object) => void;
+  onUpdate?: (newItem: object, oldItem: object) => void;
+  onDelete?: (item: object) => void;
+};
+
+type SubscribeOptions = {
+  rowId?: string;
+  filter?: FilterObject;
+};
+
+export function enhancedSubscribe(table: TableAPI, options: SubscribeOptions, handlers: Handlers) {
+  const isAdded = (changes: Changes) => changes.new_val && changes.old_val === null;
+  const isUpdated = (changes: Changes) => changes.new_val && changes.old_val;
+  const isDeleted = (changes: Changes) => changes.new_val === null && changes.old_val;
+
+  table.subscribe(options, (changes: Changes) => {
+    if (isAdded(changes) && handlers.onAdd) {
+      handlers.onAdd(changes.new_val as object);
+    } else if (isUpdated(changes) && handlers.onUpdate) {
+      handlers.onUpdate(changes.new_val as object, changes.old_val as object);
+    } else if (isDeleted(changes) && handlers.onDelete) {
+      handlers.onDelete(changes.old_val as object);
+    }
+  });
+}

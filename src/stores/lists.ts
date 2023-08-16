@@ -1,125 +1,75 @@
 import { defineStore } from "pinia";
 import { useUserStore } from "@/stores/user";
-import type { List, NewList, ListItem, OrderTableDoc, ContentSharer } from "@/types";
+import type { List, NewList, ListItem, OrderTableDoc } from "@/types";
 import {
+  rid,
+  getOwnedOrSharedListsTable,
   listsTable,
   orderTable,
   LISTS_TABLE_NAME,
-  contentSharersTable,
-  SETTINGS_TABLE_NAME,
-  SETTING_USERNAME,
   getAPIOrLocalData,
-  createDataConfig,
   listsConfig,
   listsOrderDocConfig,
-  contentSharersConfig,
   replaceListAPIOrLocalData,
+  enhancedSubscribe,
 } from "@/rethinkid";
-import type { TableAPI } from "@rethinkid/rethinkid-js-sdk";
 import { v4 as uuidv4 } from "uuid";
-import { rid, getOwnedOrSharedListsTable } from "@/rethinkid";
 
 export const useListsStore = defineStore("lists", {
   state: () => ({
     lists: null as List[] | null,
     listsOrder: [] as string[], // list IDs
-    contentSharers: null as ContentSharer[] | null,
   }),
   actions: {
-    async addContentSharer(hostId: string): Promise<void> {
-      const contentSharer: ContentSharer = { id: hostId, username: "" };
-
+    async fetchSharedLists(): Promise<void> {
       try {
-        // ID might already exist which is fine
-        await contentSharersTable.insert(contentSharer);
+        const sharedItems = await rid.sharing.listShared();
 
-        if (!this.contentSharers) this.contentSharers = [];
-        if (this.contentSharers.some((sharer) => sharer.id === contentSharer.id)) return;
-        this.contentSharers.push(contentSharer);
-      } catch (e: any) {
-        console.log("addContentSharer error:", e.message);
-      }
-    },
-    // Fetch lists and usernames shared with me
-    async fetchContentSharedWithMe(): Promise<void> {
-      if (!this.lists) this.lists = [];
+        for (const item of sharedItems) {
+          const hostId = item.hostId;
+          const tableName = item.permission?.tableName;
+          const rowId = item.permission?.condition?.rowId;
 
-      try {
-        this.contentSharers = (await getAPIOrLocalData(contentSharersConfig)) as ContentSharer[];
+          if (!tableName) continue;
+          if (tableName !== LISTS_TABLE_NAME) continue;
+          if (!rowId) continue;
 
-        for (const sharer of this.contentSharers) {
-          console.log("sharer", sharer);
-          const hostId = sharer.id;
+          console.log("hostId", hostId);
+          console.log("tableName", tableName);
+          console.log("rowId", rowId);
 
-          try {
-            // Get content sharer username:
-            // Fetch from `username` row of `settings` table of hostId
-            const sharerSettingsTable = rid.table(SETTINGS_TABLE_NAME, { userId: hostId });
-            const usernameRowConfig = createDataConfig(
-              () => sharerSettingsTable.read({ rowId: SETTING_USERNAME }),
-              `usernameRow_${hostId}`,
-            );
-            const usernameRow = (await getAPIOrLocalData(usernameRowConfig)) as {
-              id: string;
-              value: string;
-            };
-            console.log("usernameRow.value", usernameRow.value);
-            sharer.username = usernameRow.value;
+          // Get list
+          const hostTable = rid.table(tableName, { userId: hostId });
+          const sharedList = (await hostTable.read({ rowId })) as List;
 
-            // Save to contentSharers local state
-          } catch (e: any) {
-            console.log("sharer username error", e.message);
-          }
+          if (!this.lists) this.lists = [] as List[];
 
-          // Get shared lists
-          const sharedListsTable = rid.table(LISTS_TABLE_NAME, { userId: hostId }) as TableAPI;
-          const sharedListsConfig = createDataConfig(() => sharedListsTable.read(), `sharedLists_${hostId}`);
-          const sharedLists = (await getAPIOrLocalData(sharedListsConfig)) as List[];
+          this.lists.push(sharedList);
 
-          if (!sharedLists || (sharedLists && sharedLists.length === 0)) return;
+          if (!window.navigator.onLine) return;
 
-          for (const list of sharedLists) {
-            this.lists.push(list);
-          }
-
-          // Subscribe
-          if (window.navigator.onLine) {
-            sharedListsTable.subscribe({}, (changes) => {
-              console.log("Subscribe changers for host ID:", hostId);
-
-              //  added
-              if (changes.new_val && changes.old_val === null) {
-                console.log("Added", changes.new_val);
-              }
-              // deleted
-              if (changes.new_val === null && changes.old_val) {
-                console.log("A list shared with me was deleted", changes.old_val);
-                const deletedList = changes.old_val as List;
-
-                // Remove list from local state
+          enhancedSubscribe(
+            hostTable,
+            { rowId },
+            {
+              onUpdate: (newItem) => {
+                const updatedList = newItem as List;
                 if (!this.lists) return;
-
-                this.lists = this.lists.filter((list) => list.id !== deletedList.id);
-              }
-              // updated
-              if (changes.new_val && changes.old_val) {
-                console.log("Updated", changes.new_val);
-                const updatedList = changes.new_val as List;
-
-                if (!this.lists) return;
-
                 this.lists = this.lists.map((list) => {
-                  if (list.id === updatedList.id) {
-                    return updatedList;
-                  }
+                  if (list.id === updatedList.id) return updatedList;
                   return list;
                 });
-              }
-            });
-          }
+              },
+              onDelete: (item) => {
+                const deletedList = item as List;
+                if (!this.lists) return;
+                this.lists = this.lists.filter((list) => list.id !== deletedList.id);
+              },
+            },
+          );
         }
       } catch (e) {
-        console.log("fetchContentSharedWithMe error", e);
+        console.log("fetchSharedLists error", e);
       }
     },
     async fetchLists(): Promise<void> {
@@ -131,7 +81,7 @@ export const useListsStore = defineStore("lists", {
       }
 
       if (lists.length === 0) {
-        console.log("create default list");
+        // console.log("create default list");
         // Create default list
         await this.createList("Groceries");
         return;
@@ -296,17 +246,13 @@ export const useListsStore = defineStore("lists", {
     },
   },
   getters: {
-    getSharerUsername: (state): ((userId: string) => string) => {
-      return (userId: string) => {
-        const sharer = state.contentSharers?.find((sharer) => sharer.id === userId);
-        return sharer && sharer.username ? sharer.username : userId;
-      };
-    },
     getList: (state): ((listId: string) => List | null) => {
       return (listId: string) => {
         if (!state.lists) return null;
 
-        const list = state.lists.find((list) => list.id === listId);
+        let list = state.lists.find((list) => list.id === listId);
+
+        if (!list) list = state.listsShared.find((list) => list.id === listId);
 
         if (!list) {
           console.log("List not found.");

@@ -246,7 +246,7 @@ select {
   z-index: 1000;
 }
 
-/* Contacts and Invitations views */
+/* Contacts view */
 .contacts-header {
   padding: 1rem 1rem 0;
 }
@@ -277,7 +277,7 @@ select {
   justify-content: center;
   flex-wrap: wrap;
 }
-/* End Contacts and Invitations views */
+/* End Contacts view */
 
 /* Responsive displaying */
 @media only screen and (max-width: 899.9px) {

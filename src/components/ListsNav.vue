@@ -53,8 +53,34 @@ async function createAndGoToList() {
               width="16"
               height="16"
             />
-            <span v-if="listsStore.getUncheckedItems(listIdParam).length">{{
-              listsStore.getUncheckedItems(listIdParam).length
+            <span v-if="listsStore.getUncheckedItems(list.id).length">{{
+              listsStore.getUncheckedItems(list.id).length
+            }}</span>
+          </span>
+        </RouterLink>
+      </li>
+    </ul>
+    <ul v-if="listsStore.listsShared && listsStore.listsShared.length > 0" class="list-reset">
+      <li v-for="list in listsStore.listsShared" :key="list.id">
+        <RouterLink :class="{ 'is-active': listIdParam === list.id }" :to="{ name: LIST, params: { listId: list.id } }"
+          ><span>{{ list.name }} </span>
+          <span class="item-info">
+            <img
+              v-if="userStore.userId && userStore.userId !== list.hostId"
+              alt="Shared list icon"
+              src="@/assets/share.svg"
+              width="16"
+              height="16"
+            />
+            <img
+              v-if="list.id === userStore.primaryListId"
+              alt="Primary list icon"
+              src="@/assets/house.svg"
+              width="16"
+              height="16"
+            />
+            <span v-if="listsStore.getUncheckedItems(list.id).length">{{
+              listsStore.getUncheckedItems(list.id).length
             }}</span>
           </span>
         </RouterLink>

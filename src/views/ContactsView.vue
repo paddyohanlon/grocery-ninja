@@ -206,8 +206,6 @@ if (window.navigator.onLine) {
         notificationsStore.addNotification("Contact added.");
         const newContact = changes.new_val as Contact;
 
-        await listsStore.addContentSharer(newContact.contactId);
-
         contacts.value.push(newContact);
 
         // remove pending connection from database and store
@@ -287,7 +285,8 @@ onUnmounted(() => {
         <h2>Contacts List</h2>
         <ul class="contacts-list list-reset">
           <li v-for="contact in contacts" :key="contact.id">
-            <div>{{ listsStore.getSharerUsername(contact.contactId) }}</div>
+            <div>contact: {{ contact }}</div>
+            <div>{{ contact.contactId }}</div>
             <div class="button-list">
               <button v-if="contact.connected" @click="disconnect(contact.contactId)" class="button button-danger">
                 Unfriend
