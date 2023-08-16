@@ -88,10 +88,17 @@ class SharedItem {
 
   _subscribe() {
     this._hostTable.subscribe({ rowId: this._rowId }, (changes) => {
+      const isAdded = (changes: Changes) => changes.new_val && changes.old_val === null;
       const isUpdated = (changes: Changes) => changes.new_val && changes.old_val;
       const isDeleted = (changes: Changes) => changes.new_val === null && changes.old_val;
 
       // TODO Added
+      // Then do _hostId, add to same table
+
+      if (isAdded(changes)) {
+        console.log("added", changes);
+        this._store[this._sharedTableName].push(changes.new_val);
+      }
 
       if (isUpdated(changes)) {
         console.log("updated", changes);
