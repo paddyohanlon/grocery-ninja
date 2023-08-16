@@ -6,13 +6,20 @@ import router from "./router";
 
 import BaseLayout from "./components/BaseLayout.vue";
 
+import { useRethinkIdPiniaPlugin } from "./pinia/plugin";
+
 import "./assets/main.css";
 
 const app = createApp(App);
 
 app.component("BaseLayout", BaseLayout);
 
-app.use(createPinia());
+const pinia = createPinia();
+
+pinia.use(useRethinkIdPiniaPlugin);
+
+app.use(pinia);
+
 app.use(router);
 
 app.mount("#app");
