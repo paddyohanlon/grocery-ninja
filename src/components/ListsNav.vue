@@ -40,7 +40,7 @@ async function createAndGoToList() {
           ><span>{{ list.name }} </span>
           <span class="item-info">
             <img
-              v-if="userStore.userId && userStore.userId !== list.hostId"
+              v-if="userStore.userId && list.hostId && userStore.userId !== list.hostId"
               alt="Shared list icon"
               src="@/assets/share.svg"
               width="16"

@@ -7,8 +7,6 @@ import type { TableAPI } from "@rethinkid/rethinkid-js-sdk";
 // unsubscribe
 // types
 
-type ObjectWithOptionalId = { id?: string };
-
 type Changes = {
   new_val: null | object;
   old_val: null | object;
@@ -38,12 +36,14 @@ export const useRethinkIdPiniaPlugin: PiniaPlugin = ({ store }) => {
 class SharedItem {
   private _sharedTableName: string;
   private _rowId: string;
+  private _hostId: string;
   private _hostTable: TableAPI;
   private _store: any;
 
   constructor(store: any, tableName: string, hostId: string, rowId = "") {
     this._rowId = rowId;
     this._sharedTableName = `${tableName}Shared`;
+    this._hostId = hostId;
     this._hostTable = rid.table(tableName, { userId: hostId });
     this._store = store;
   }
@@ -73,17 +73,36 @@ class SharedItem {
       for (const row of rows) {
         if (!row) continue;
 
-        // Update, else add
-        if (this._store[this._sharedTableName].some((item: ObjectWithOptionalId) => item.id === row.id)) {
-          this._store[this._sharedTableName] = this._store[this._sharedTableName].map((item: ObjectWithOptionalId) => {
-            if (item.id === row.id) return row;
-            return item;
-          });
+        if (this._store[this._sharedTableName].some((r: any) => r.id === row.id)) {
+          this._updateRow(row);
         } else {
-          this._store[this._sharedTableName].push(row);
+          this._addRow(row);
         }
       }
     });
+  }
+
+  _addHostToRow(row: any) {
+    row._hostId = this._hostId;
+  }
+
+  _addRow(row: any) {
+    this._addHostToRow(row);
+    this._store[this._sharedTableName].push(row);
+  }
+
+  _updateRow(row: any) {
+    this._store[this._sharedTableName] = this._store[this._sharedTableName].map((r: any) => {
+      if (r.id === row.id) {
+        this._addHostToRow(row);
+        return row;
+      }
+      return r;
+    });
+  }
+
+  _deleteRow(row: any) {
+    this._store[this._sharedTableName] = this._store[this._sharedTableName].filter((r: any) => r.id !== row.id);
   }
 
   _subscribe() {
@@ -92,31 +111,15 @@ class SharedItem {
       const isUpdated = (changes: Changes) => changes.new_val && changes.old_val;
       const isDeleted = (changes: Changes) => changes.new_val === null && changes.old_val;
 
-      // TODO Added
-      // Then do _hostId, add to same table
-
       if (isAdded(changes)) {
         console.log("added", changes);
-        this._store[this._sharedTableName].push(changes.new_val);
-      }
-
-      if (isUpdated(changes)) {
+        this._addRow(changes.new_val);
+      } else if (isUpdated(changes)) {
         console.log("updated", changes);
-        const changedItem = changes.new_val as ObjectWithOptionalId;
-        if (!changedItem.id) return;
-        if (!this._store[this._sharedTableName]) return;
-        this._store[this._sharedTableName] = this._store[this._sharedTableName].map((item: ObjectWithOptionalId) => {
-          if (item.id === changedItem.id) return changedItem;
-          return item;
-        });
-      }
-      if (isDeleted(changes)) {
+        this._updateRow(changes.new_val);
+      } else if (isDeleted(changes)) {
         console.log("deleted", changes);
-        const changedItem = changes.old_val as ObjectWithOptionalId;
-        if (!this._store[this._sharedTableName]) return;
-        this._store[this._sharedTableName] = this._store[this._sharedTableName].filter(
-          (item: ObjectWithOptionalId) => item.id !== changedItem.id,
-        );
+        this._deleteRow(changes.old_val);
       }
     });
   }

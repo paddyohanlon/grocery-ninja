@@ -2,7 +2,6 @@ import { defineStore } from "pinia";
 import { useUserStore } from "@/stores/user";
 import type { List, NewList, ListItem, OrderTableDoc } from "@/types";
 import {
-  rid,
   getOwnedOrSharedListsTable,
   listsTable,
   orderTable,
@@ -11,7 +10,6 @@ import {
   listsConfig,
   listsOrderDocConfig,
   replaceListAPIOrLocalData,
-  enhancedSubscribe,
 } from "@/rethinkid";
 import { v4 as uuidv4 } from "uuid";
 
@@ -21,57 +19,6 @@ export const useListsStore = defineStore("lists", {
     listsOrder: [] as string[], // list IDs
   }),
   actions: {
-    async fetchSharedLists(): Promise<void> {
-      try {
-        const sharedItems = await rid.sharing.listShared();
-
-        for (const item of sharedItems) {
-          const hostId = item.hostId;
-          const tableName = item.permission?.tableName;
-          const rowId = item.permission?.condition?.rowId;
-
-          if (!tableName) continue;
-          if (tableName !== LISTS_TABLE_NAME) continue;
-          if (!rowId) continue;
-
-          console.log("hostId", hostId);
-          console.log("tableName", tableName);
-          console.log("rowId", rowId);
-
-          // Get list
-          const hostTable = rid.table(tableName, { userId: hostId });
-          const sharedList = (await hostTable.read({ rowId })) as List;
-
-          if (!this.lists) this.lists = [] as List[];
-
-          this.lists.push(sharedList);
-
-          if (!window.navigator.onLine) return;
-
-          enhancedSubscribe(
-            hostTable,
-            { rowId },
-            {
-              onUpdate: (newItem) => {
-                const updatedList = newItem as List;
-                if (!this.lists) return;
-                this.lists = this.lists.map((list) => {
-                  if (list.id === updatedList.id) return updatedList;
-                  return list;
-                });
-              },
-              onDelete: (item) => {
-                const deletedList = item as List;
-                if (!this.lists) return;
-                this.lists = this.lists.filter((list) => list.id !== deletedList.id);
-              },
-            },
-          );
-        }
-      } catch (e) {
-        console.log("fetchSharedLists error", e);
-      }
-    },
     async fetchLists(): Promise<void> {
       let lists = [] as List[];
       try {
@@ -118,7 +65,6 @@ export const useListsStore = defineStore("lists", {
         items: [],
         archived: false,
         userIDsWithAccess: [],
-        hostId: userStore.userId,
       };
 
       const id = await listsTable.insert(newList);
@@ -312,7 +258,7 @@ export const useListsStore = defineStore("lists", {
 
       const userStore = useUserStore();
 
-      return state.lists.filter((list) => list.hostId === userStore.userId);
+      return state.lists.filter((list) => !list._hostId || list._hostId === userStore.userId);
     },
   },
 });

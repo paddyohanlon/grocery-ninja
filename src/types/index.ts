@@ -4,8 +4,8 @@ export interface List {
   items: ListItem[];
   archived: boolean;
   userIDsWithAccess: string[];
-  hostId: string;
   needsSync?: boolean;
+  _hostId?: string; // added by Pinia plugin to rows shared with me
 }
 
 export type NewList = Omit<List, "id">;

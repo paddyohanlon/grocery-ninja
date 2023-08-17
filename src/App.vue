@@ -66,17 +66,6 @@ async function onLogin() {
     old_val: null | object;
   };
 
-  // Plugin funcs
-  // function onAdded(callback: () => void) {
-  //   return callback();
-  // }
-  // function onDeleted(callback: () => void) {
-  //   return callback();
-  // }
-  // function onUpdated(callback: () => void) {
-  //   return callback();
-  // }
-
   function isAddedChange(changes: Changes) {
     return changes.new_val && changes.old_val === null;
   }
@@ -87,22 +76,9 @@ async function onLogin() {
     return changes.new_val && changes.old_val;
   }
 
-  // function subscribeHelper(changes: Changes): void {
-  //   if (isAddedChange(changes)) {
-  //   }
-  //   if (isDeletedChange(changes)) {
-  //   }
-  //   if (isUpdateChange(changes)) {
-  //   }
-  // }
-  // End plugin funcs
-
   syncData()
     .then(() => {
       return listsStore.fetchLists();
-    })
-    .then(() => {
-      // return listsStore.fetchSharedLists();
     })
     .then(() => {
       // Subscribe to my lists table changes
