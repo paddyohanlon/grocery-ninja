@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { RouterLink, RouterView } from "vue-router";
-import { listsTable, rid, syncData } from "@/rethinkid";
+import { rid, syncData } from "@/rethinkid";
 import { useUserStore } from "@/stores/user.js";
 import { useListsStore } from "@/stores/lists";
 import { useNotificationsStore } from "@/stores/notifications";
-import { useRouter, useRoute } from "vue-router";
-import { HOME, CONTACTS, LIST, SHARING } from "@/router/route-names";
-import type { List } from "@/types";
+import { useRouter } from "vue-router";
+import { CONTACTS, SHARING } from "@/router/route-names";
 
 const router = useRouter();
-const route = useRoute();
 
 const loading = ref(true);
 
@@ -49,10 +47,6 @@ window.addEventListener("offline", () => (online.value = false));
 async function onLogin() {
   userStore.setLoggedIn(true);
 
-  rid.sharing.onShared((val) => {
-    console.log("onShared fired", val);
-  });
-
   await userStore.fetchUserInfo();
   await userStore.fetchSettings();
 
@@ -61,67 +55,74 @@ async function onLogin() {
     notificationsStore.addNotification("Contact connection request received.");
   });
 
-  type Changes = {
-    new_val: null | object;
-    old_val: null | object;
-  };
+  await listsStore.fetchLists();
+  await listsStore.fetchSharedLists();
 
-  function isAddedChange(changes: Changes) {
-    return changes.new_val && changes.old_val === null;
-  }
-  function isDeletedChange(changes: Changes) {
-    return changes.new_val === null && changes.old_val;
-  }
-  function isUpdateChange(changes: Changes) {
-    return changes.new_val && changes.old_val;
-  }
+  loading.value = false;
 
-  syncData()
-    .then(() => {
-      return listsStore.fetchLists();
-    })
-    .then(() => {
-      // Subscribe to my lists table changes
-      if (window.navigator.onLine) {
-        listsTable.subscribe({}, (changes) => {
-          if (isAddedChange(changes)) {
-            console.log("Added", changes.new_val);
-          }
-          if (isDeletedChange(changes)) {
-            console.log("One of my lists was deleted", changes.old_val);
-            const deletedList = changes.old_val as List;
+  // type Changes = {
+  //   new_val: null | object;
+  //   old_val: null | object;
+  // };
 
-            // Remove list from local state
-            if (!listsStore.lists) return;
+  // function isAddedChange(changes: Changes) {
+  //   return changes.new_val && changes.old_val === null;
+  // }
+  // function isDeletedChange(changes: Changes) {
+  //   return changes.new_val === null && changes.old_val;
+  // }
+  // function isUpdateChange(changes: Changes) {
+  //   return changes.new_val && changes.old_val;
+  // }
 
-            listsStore.lists = listsStore.lists.filter((list) => list.id !== deletedList.id);
-          }
-          if (isUpdateChange(changes)) {
-            console.log("Updated", changes.new_val);
-            const updatedList = changes.new_val as List;
+  // Tidy all this
+  // Go to HOME, make HOME lists view
+  // syncData()
+  //   .then(() => {
+  //     return listsStore.fetchLists();
+  //   })
+  //   .then(() => {
+  //     // Subscribe to my lists table changes
+  //     if (window.navigator.onLine) {
+  //       listsTable.subscribe({}, (changes) => {
+  //         if (isAddedChange(changes)) {
+  //           console.log("Added", changes.new_val);
+  //         }
+  //         if (isDeletedChange(changes)) {
+  //           console.log("One of my lists was deleted", changes.old_val);
+  //           const deletedList = changes.old_val as List;
 
-            if (!listsStore.lists) return;
+  //           // Remove list from local state
+  //           if (!listsStore.lists) return;
 
-            listsStore.lists = listsStore.lists.map((list) => {
-              if (list.id === updatedList.id) {
-                return updatedList;
-              }
-              return list;
-            });
-          }
-        });
-      }
+  //           listsStore.lists = listsStore.lists.filter((list) => list.id !== deletedList.id);
+  //         }
+  //         if (isUpdateChange(changes)) {
+  //           console.log("Updated", changes.new_val);
+  //           const updatedList = changes.new_val as List;
 
-      if (listsStore.lists === null) return;
-      loading.value = false;
+  //           if (!listsStore.lists) return;
 
-      // Redirect the home route to the primary list
-      if (route.name !== HOME) return;
+  //           listsStore.lists = listsStore.lists.map((list) => {
+  //             if (list.id === updatedList.id) {
+  //               return updatedList;
+  //             }
+  //             return list;
+  //           });
+  //         }
+  //       });
+  //     }
 
-      const primaryListId = userStore.primaryListId;
-      if (!primaryListId) return;
-      router.push({ name: LIST, params: { listId: primaryListId } });
-    });
+  //     if (listsStore.lists === null) return;
+  //     loading.value = false;
+
+  //     // Redirect the home route to the primary list
+  //     if (route.name !== HOME) return;
+
+  //     const primaryListId = userStore.primaryListId;
+  //     if (!primaryListId) return;
+  //     router.push({ name: LIST, params: { listId: primaryListId } });
+  //   });
 }
 
 function goToFromAccountDropdown(routeName: string) {

@@ -3,7 +3,7 @@ import ListsNav from "@/components/ListsNav.vue";
 </script>
 
 <template>
-  <div class="container">
+  <div class="has-padding">
     <h1>Lists</h1>
     <div class="card no-padding">
       <ListsNav />
@@ -11,12 +11,4 @@ import ListsNav from "@/components/ListsNav.vue";
   </div>
 </template>
 
-<style scoped>
-.container {
-  padding: 1rem;
-}
-
-.no-padding {
-  padding: 0;
-}
-</style>
+<style scoped></style>

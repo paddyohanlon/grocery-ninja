@@ -30,7 +30,7 @@ const list = computed(() => listsStore.getList(listIdParam.value));
 const newList = ref(Object.assign({}, list.value));
 
 watch(
-  () => listsStore.getList(listIdParam.value),
+  () => list.value,
   (updatedList) => {
     newList.value = Object.assign({}, updatedList);
   },
@@ -41,10 +41,6 @@ watch(
   (newId) => {
     listDropdownIsVisible.value = false;
     listIdParam.value = newId as string;
-    list.value = listsStore.getList(listIdParam.value);
-
-    if (!list.value) return;
-    newList.value = Object.assign({}, list.value);
   },
 );
 
@@ -91,12 +87,10 @@ async function deleteList() {
 function submitUpdateList() {
   if (!list.value) return;
 
-  list.value = Object.assign(list.value, newList.value);
-
   updatingList.value = true;
   setTimeout(() => (updatingList.value = false), STATE_CHANGE_DURATION_MS);
 
-  listsStore.updateList(list.value);
+  listsStore.updateList(newList.value);
 }
 </script>
 

@@ -114,14 +114,14 @@ async function submitShareWithUser() {
   shareButtonText.value = shareButtonTextUpdating;
   setTimeout(() => (shareButtonText.value = shareButtonTextInitial), STATE_CHANGE_DURATION_MS);
 
-  // const permissionCondition: PermissionCondition = {
-  //   rowId: resourceInputValue.value,
-  // };
+  const permissionCondition: PermissionCondition = {
+    rowId: resourceInputValue.value,
+  };
 
   const permission: PermissionTemplate = {
     tableName: LISTS_TABLE_NAME,
     types: [PermissionType.READ, PermissionType.INSERT, PermissionType.UPDATE, PermissionType.DELETE],
-    // condition: permissionCondition,
+    condition: permissionCondition,
   };
 
   const response = await rid.sharing.withUser(userIdInputValue.value, permission);
@@ -129,9 +129,6 @@ async function submitShareWithUser() {
   console.log(response);
 
   userIdInputValue.value = "";
-
-  // Need to fetch because only link returned. No ID.
-  // fetch something?
 }
 </script>
 

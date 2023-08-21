@@ -220,6 +220,10 @@ select {
   padding: 1rem;
 }
 
+.no-padding {
+  padding: 0;
+}
+
 .can-scroll {
   overflow-y: auto;
   overflow-x: hidden;
