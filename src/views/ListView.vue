@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import type { Ref } from "vue";
 import { useListsStore } from "@/stores/lists";
 import { useUserStore } from "@/stores/user.js";
@@ -25,7 +25,7 @@ const listDropdownIsVisible = ref(false);
 const listIdParam = ref(route.params.listId as string);
 const itemIdParam = ref(route.params.itemId as string);
 
-const list = ref(listsStore.getList(listIdParam.value));
+const list = computed(() => listsStore.getList(listIdParam.value));
 
 const newList = ref(Object.assign({}, list.value));
 
