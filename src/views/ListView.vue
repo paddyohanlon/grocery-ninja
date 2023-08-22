@@ -121,8 +121,8 @@ function submitUpdateList() {
                 <span v-if="updatingList" class="saved-notice" aria-hidden="true">Saved!</span>
                 <button class="screen-reader-text">Update</button>
               </form>
-              <div v-if="list._hostId && list._hostId !== userStore.userId" class="shared-by">
-                Shared by <strong>{{ list._hostId }}</strong>
+              <div v-if="list.hostId !== userStore.userId" class="shared-by">
+                Shared by <strong>{{ list.hostId }}</strong>
               </div>
               <div v-if="list.needsSync" class="shared-by">Needs Sync</div>
             </div>
@@ -145,7 +145,7 @@ function submitUpdateList() {
                 aria-labelledby="toggle-list-dropdown-button"
               >
                 <ul class="list-dropdown-list list-reset">
-                  <li v-if="!list._hostId || list._hostId === userStore.userId">
+                  <li v-if="list.hostId === userStore.userId">
                     <ul class="list-dropdown-sub-list list-reset">
                       <li>
                         <RouterLink class="button" :to="{ name: SHARING, query: { listId: list.id } }"

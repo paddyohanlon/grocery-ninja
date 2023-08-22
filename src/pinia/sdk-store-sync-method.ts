@@ -2,6 +2,9 @@ import type { TableAPI } from "@rethinkid/rethinkid-js-sdk";
 
 // TODO
 // unsubscribe (could return the unsubscribe function from sync())
+// Make module
+// Export single method `mirror(params...)`
+// Move to SDK, publish test and all that.
 
 type Changes = {
   new_val: null | object;
@@ -9,24 +12,26 @@ type Changes = {
 };
 
 type ResourceOptions = {
-  userId?: string;
   rowId?: string;
 };
 
-export class Resource {
+export async function mirror(storeProperty: any[], table: TableAPI, { rowId = "" }: ResourceOptions = {}) {
+  const resource = new Resource(storeProperty, table, { rowId });
+  resource.mirror();
+}
+
+class Resource {
   private _storeProperty: any[];
   private _table: TableAPI;
-  private _userId: string;
   private _rowId: string;
 
-  constructor(storeProperty: any[], table: TableAPI, { userId = "", rowId = "" }: ResourceOptions = {}) {
+  constructor(storeProperty: any[], table: TableAPI, { rowId = "" }: ResourceOptions = {}) {
     this._storeProperty = storeProperty;
     this._table = table;
-    this._userId = userId;
     this._rowId = rowId;
   }
 
-  async sync() {
+  async mirror() {
     await this._addRowsToProperty();
     this._subscribe();
   }
@@ -45,21 +50,14 @@ export class Resource {
     }
   }
 
-  private _addHostToRow(row: any) {
-    if (!this._userId) return;
-    row._hostId = this._userId;
-  }
-
   private _addRow(row: any) {
     if (this._storeProperty.some((r: any) => r.id === row.id)) return;
-    this._addHostToRow(row);
     this._storeProperty.push(row);
   }
 
   private _updateRow(row: any) {
     this._storeProperty.forEach((r: any, index: number) => {
       if (r.id === row.id) {
-        this._addHostToRow(row);
         this._storeProperty[index] = row;
       }
     });

@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { LISTS_TABLE_NAME, rid } from "@/rethinkid";
-import { Resource } from "@/pinia/sdk-store-sync-method";
+import { mirror } from "@/pinia/sdk-store-sync-method";
 import { useUserStore } from "@/stores/user";
 import type { List, NewList, ListItem } from "@/types";
 import { getOwnedOrSharedListsTable, listsTable, replaceListAPIOrLocalData } from "@/rethinkid";
@@ -13,8 +13,7 @@ export const useListsStore = defineStore("lists", {
   }),
   actions: {
     async fetchLists(): Promise<void> {
-      const resource = new Resource(this.lists, listsTable);
-      await resource.sync();
+      mirror(this.lists, listsTable);
     },
     async fetchSharedLists(): Promise<void> {
       rid.sharing.onShared(async (grantedPermission) => {
@@ -27,8 +26,7 @@ export const useListsStore = defineStore("lists", {
         if (tableName !== LISTS_TABLE_NAME) return;
 
         const table = rid.table(tableName, { userId: hostId });
-        const resource = new Resource(this.lists, table, { userId: hostId, rowId });
-        await resource.sync();
+        mirror(this.lists, table, { rowId });
       });
     },
     // TODO re-add list order...
@@ -72,13 +70,14 @@ export const useListsStore = defineStore("lists", {
     //   this.lists = orderedLists;
     // },
     async createList(name: string): Promise<string> {
-      // const userStore = useUserStore();
+      const userStore = useUserStore();
 
       const newList: NewList = {
         name,
         items: [],
         archived: false,
         userIDsWithAccess: [],
+        hostId: userStore.userId,
       };
 
       const id = await listsTable.insert(newList);
@@ -261,7 +260,7 @@ export const useListsStore = defineStore("lists", {
 
       const userStore = useUserStore();
 
-      return state.lists.filter((list) => !list._hostId || list._hostId === userStore.userId);
+      return state.lists.filter((list) => list.hostId === userStore.userId);
     },
   },
 });

@@ -1,15 +1,23 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import type { Ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { LIST } from "@/router/route-names";
 import { useListsStore } from "@/stores/lists";
 import { useUserStore } from "@/stores/user.js";
 import { storeToRefs } from "pinia";
+import type { List } from "@/types";
+import { mirror } from "@/pinia/sdk-store-sync-method";
+import { listsTable } from "@/rethinkid";
 
 const listsStore = useListsStore();
 const userStore = useUserStore();
 
 const { lists } = storeToRefs(listsStore);
+
+const listsRef: Ref<List[]> = ref([]);
+
+mirror(listsRef.value, listsTable);
 
 const router = useRouter();
 const route = useRoute();
@@ -34,13 +42,17 @@ async function createAndGoToList() {
 
 <template>
   <nav aria-label="Lists" class="list-nav can-scroll">
+    <div>Lists Ref</div>
+    <ul>
+      <li v-for="list of listsRef" :key="list.id">{{ list.name }}</li>
+    </ul>
     <ul v-if="lists && lists.length > 0" class="list-reset">
       <li v-for="list in lists" :key="list.id">
         <RouterLink :class="{ 'is-active': listIdParam === list.id }" :to="{ name: LIST, params: { listId: list.id } }"
           ><span>{{ list.name }} </span>
           <span class="item-info">
             <img
-              v-if="userStore.userId && list._hostId && userStore.userId !== list._hostId"
+              v-if="userStore.userId && userStore.userId !== list.hostId"
               alt="Shared list icon"
               src="@/assets/share.svg"
               width="16"

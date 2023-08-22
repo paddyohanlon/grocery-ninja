@@ -43,7 +43,7 @@ export const settingsTable = rid.table(SETTINGS_TABLE_NAME, {
 });
 
 export async function getOwnedOrSharedListsTable(list: List): Promise<TableAPI> {
-  return rid.table(LISTS_TABLE_NAME, { userId: list._hostId || "" });
+  return rid.table(LISTS_TABLE_NAME, { userId: list.hostId });
 }
 
 // Data fetch config
