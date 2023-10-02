@@ -3,6 +3,7 @@ import { ref, watch, computed } from "vue";
 import type { Ref } from "vue";
 import { useListsStore } from "@/stores/lists";
 import { useUserStore } from "@/stores/user.js";
+import { useNotificationsStore } from "@/stores/notifications";
 import { useRoute, useRouter } from "vue-router";
 import { HOME, LISTS, LIST_ITEM, SHARING } from "@/router/route-names";
 import ListsNav from "@/components/ListsNav.vue";
@@ -11,6 +12,7 @@ import { STATE_CHANGE_DURATION_MS } from "@/timing";
 
 const listsStore = useListsStore();
 const userStore = useUserStore();
+const notificationStore = useNotificationsStore();
 
 const route = useRoute();
 const router = useRouter();
@@ -31,8 +33,12 @@ const newList = ref(Object.assign({}, list.value));
 
 watch(
   () => list.value,
-  (updatedList) => {
-    newList.value = Object.assign({}, updatedList);
+  (listNew) => {
+    if (!listNew) {
+      notificationStore.addNotification("List was deleted");
+      router.push({ name: HOME });
+    }
+    newList.value = Object.assign({}, listNew);
   },
 );
 
@@ -101,7 +107,7 @@ function submitUpdateList() {
     </template>
     <template #main>
       <div class="list-content">
-        <template v-if="!list || !newList">List not found.</template>
+        <template v-if="!list">List not found.</template>
         <template v-else>
           <RouterLink class="hide-above-900px" :to="{ name: LISTS }">&larr; Lists</RouterLink>
           <header class="list-header">
@@ -121,13 +127,13 @@ function submitUpdateList() {
                 <span v-if="updatingList" class="saved-notice" aria-hidden="true">Saved!</span>
                 <button class="screen-reader-text">Update</button>
               </form>
-              <div v-if="list.hostId !== userStore.userId" class="shared-by">
-                Shared by <strong>{{ list.hostId }}</strong>
+              <div v-if="list.ownerId !== userStore.userId" class="shared-by">
+                Shared by <strong>{{ list.ownerId }}</strong>
               </div>
-              <div v-if="list.needsSync" class="shared-by">Needs Sync</div>
+              <div class="shared-by">Last updated: {{ new Date(list.lastUpdated).toLocaleString() }}</div>
             </div>
 
-            <div class="list-actions">
+            <div v-if="userStore.online" class="list-actions">
               <button
                 @click="toggleListDropdown"
                 class="list-actions-button link-button"
@@ -145,36 +151,12 @@ function submitUpdateList() {
                 aria-labelledby="toggle-list-dropdown-button"
               >
                 <ul class="list-dropdown-list list-reset">
-                  <li v-if="list.hostId === userStore.userId">
+                  <li v-if="list.ownerId === userStore.userId">
                     <ul class="list-dropdown-sub-list list-reset">
                       <li>
                         <RouterLink class="button" :to="{ name: SHARING, query: { listId: list.id } }"
                           >Share List</RouterLink
                         >
-                      </li>
-                      <li>
-                        <button
-                          v-if="list.id !== userStore.primaryListId"
-                          @click="
-                            //@ts-ignore
-                            userStore.updatePrimaryListId(list.id)
-                          "
-                          class="button"
-                        >
-                          Make list primary
-                        </button>
-                        <div v-else>
-                          <span class="button button-orange button-disabled">This is your primary list</span>
-                        </div>
-                      </li>
-                    </ul>
-                  </li>
-                  <li v-if="list.userIDsWithAccess.length > 0">
-                    <h3>Shared with</h3>
-                    <ul class="list-reset">
-                      <li v-for="(userIdWithAccess, index) of list.userIDsWithAccess" :key="index">
-                        <template v-if="userIdWithAccess === userStore.userId">Me</template>
-                        <template v-else>{{ userIdWithAccess }}</template>
                       </li>
                     </ul>
                   </li>

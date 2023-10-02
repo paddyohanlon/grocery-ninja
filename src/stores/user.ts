@@ -1,29 +1,26 @@
 import { defineStore } from "pinia";
-import { settingsTable, SETTING_PRIMARY_LIST_ID, getAPIOrLocalData, userInfoConfig, settingsConfig } from "@/rethinkid";
+import { useStorage } from "@vueuse/core";
+import { rid } from "@/rethinkid";
 
 export const useUserStore = defineStore("user", {
   state: () => ({
-    loggedIn: false,
-    userId: "",
-    primaryListId: "",
+    loggedIn: useStorage("loggedIn", false),
+    userId: useStorage("userId", ""),
+    online: window.navigator.onLine,
   }),
   actions: {
+    listenOnline(): void {
+      window.addEventListener("online", () => (this.online = true));
+      window.addEventListener("offline", () => (this.online = false));
+    },
     setLoggedIn(status: boolean): void {
       this.loggedIn = status;
     },
     async fetchUserInfo(): Promise<void> {
-      const userInfo = await getAPIOrLocalData(userInfoConfig);
-      this.userId = userInfo.id;
-    },
-    async fetchSettings(): Promise<void> {
-      const settings = (await getAPIOrLocalData(settingsConfig)) as any[];
+      if (!window.navigator.onLine) return;
 
-      const primaryListId = settings.find((setting) => setting.id === SETTING_PRIMARY_LIST_ID);
-      this.primaryListId = primaryListId.value;
-    },
-    async updatePrimaryListId(id: string): Promise<void> {
-      this.primaryListId = id;
-      await settingsTable.update({ id: SETTING_PRIMARY_LIST_ID, value: id });
+      const userInfo = await rid.social.getUser();
+      this.userId = userInfo.id;
     },
   },
 });

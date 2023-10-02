@@ -3,9 +3,11 @@ export interface List {
   name: string;
   items: ListItem[];
   archived: boolean;
-  userIDsWithAccess: string[];
-  hostId: string;
-  needsSync?: boolean;
+  ownerId: string;
+  /**
+   * A timestamp
+   */
+  lastUpdated: number;
 }
 
 export type NewList = Omit<List, "id">;
@@ -18,11 +20,6 @@ export interface ListItem {
   quantity: number;
   notes: string;
   checked: boolean;
-}
-
-export interface OrderTableDoc {
-  id: string; // table name
-  order: string[]; // doc IDs
 }
 
 export type ReadDataConfig = {

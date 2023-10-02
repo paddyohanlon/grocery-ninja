@@ -1,23 +1,15 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import type { Ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { LIST } from "@/router/route-names";
 import { useListsStore } from "@/stores/lists";
 import { useUserStore } from "@/stores/user.js";
 import { storeToRefs } from "pinia";
-import type { List } from "@/types";
-import { mirror } from "@/pinia/sdk-store-sync-method";
-import { listsTable } from "@/rethinkid";
 
 const listsStore = useListsStore();
 const userStore = useUserStore();
 
 const { lists } = storeToRefs(listsStore);
-
-const listsRef: Ref<List[]> = ref([]);
-
-mirror(listsRef.value, listsTable);
 
 const router = useRouter();
 const route = useRoute();
@@ -42,26 +34,15 @@ async function createAndGoToList() {
 
 <template>
   <nav aria-label="Lists" class="list-nav can-scroll">
-    <div>Lists Ref</div>
-    <ul>
-      <li v-for="list of listsRef" :key="list.id">{{ list.name }}</li>
-    </ul>
     <ul v-if="lists && lists.length > 0" class="list-reset">
       <li v-for="list in lists" :key="list.id">
         <RouterLink :class="{ 'is-active': listIdParam === list.id }" :to="{ name: LIST, params: { listId: list.id } }"
           ><span>{{ list.name }} </span>
           <span class="item-info">
             <img
-              v-if="userStore.userId && userStore.userId !== list.hostId"
+              v-if="userStore.userId && userStore.userId !== list.ownerId"
               alt="Shared list icon"
               src="@/assets/share.svg"
-              width="16"
-              height="16"
-            />
-            <img
-              v-if="list.id === userStore.primaryListId"
-              alt="Primary list icon"
-              src="@/assets/house.svg"
               width="16"
               height="16"
             />
@@ -72,7 +53,7 @@ async function createAndGoToList() {
     </ul>
   </nav>
 
-  <form @submit.prevent="createAndGoToList()" class="create-list-form">
+  <form v-if="userStore.online" @submit.prevent="createAndGoToList()" class="create-list-form">
     <label class="list-name-label">
       <span class="screen-reader-text">List name</span>
       <input
@@ -88,6 +69,7 @@ async function createAndGoToList() {
       </button>
     </label>
   </form>
+  <div v-else class="link-item">Cannot create lists offline.</div>
 </template>
 
 <style scoped>
@@ -95,7 +77,8 @@ async function createAndGoToList() {
   flex: 1;
 }
 
-.list-nav a {
+.list-nav a,
+.link-item {
   display: flex;
   gap: 1rem;
   align-items: center;

@@ -2,7 +2,7 @@
 const version = "v1";
 const staticCacheName = version + "_staticfiles";
 const urlsToCache = [
-  /* populated by update-service-worker.js */
+  /* populated by update-service-worker.js, run by the `postbuild` command */
 ];
 
 const cacheList = [staticCacheName];
@@ -58,7 +58,7 @@ addEventListener("fetch", (fetchEvent) => {
     fetch(request)
       .then((responseFromFetch) => {
         // Put a copy in the cache
-        console.log("SW: request.url", request);
+        // console.log("SW: request.url", request);
 
         // const acceptHeader = request.headers.get("Accept");
         // const isNotSocketIO = !request.url.includes("socket.io");
@@ -83,7 +83,7 @@ addEventListener("fetch", (fetchEvent) => {
         if (request.headers.get("Accept").includes("text/html")) {
           return caches.match("/").then((responseFromCache) => {
             if (responseFromCache) {
-              console.log("SW: matched `/`. responseFromCache:", responseFromCache);
+              // console.log("SW: matched `/`. responseFromCache:", responseFromCache);
               // console.log("SW: Fetch - fetch error, serve from cache");
               return responseFromCache;
             }

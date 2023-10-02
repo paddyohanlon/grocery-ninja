@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import type { Ref } from "vue";
-import { LISTS_TABLE_NAME, rid, getAPIOrLocalData, contactsListConfig } from "@/rethinkid";
+import { rid } from "@/rethinkid";
+import { LISTS_COLLECTION_NAME } from "@/stores/lists";
 import { PermissionType } from "@rethinkid/rethinkid-js-sdk";
 import type {
   Link,
   GrantedPermission,
   Permission,
   PermissionTemplate,
-  PermissionCondition,
-  Contact,
+  FilterObject,
 } from "@rethinkid/rethinkid-js-sdk/dist/types/types/index";
 import { STATE_CHANGE_DURATION_MS } from "@/timing";
 import { useRoute } from "vue-router";
@@ -19,33 +19,22 @@ const route = useRoute();
 
 const listsStore = useListsStore();
 
-/**
- * Contacts
- */
-const contacts: Ref<Contact[]> = ref([]);
-
-async function fetchContacts() {
-  const contactsList = await getAPIOrLocalData(contactsListConfig);
-  contacts.value = contactsList;
-}
-fetchContacts();
-
 const baseUrl = import.meta.env.MODE === "development" ? "http://localhost:3377/l/" : "https://id.rethinkdb.cloud/l/";
 
 const permissions: Ref<Permission[]> = ref([]);
-rid.sharing.list({}).then((response) => {
+rid.permissions.list().then((response) => {
   permissions.value = response;
 });
 
 const links: Ref<Link[]> = ref([]);
-rid.sharing.listLinks({}).then((response) => {
+rid.permissions.links.list().then((response) => {
   links.value = response;
 });
 
-const itemsShared: Ref<GrantedPermission[]> = ref([]);
-rid.sharing.listShared().then((response) => {
-  console.log("listShared", response);
-  itemsShared.value = response;
+const permissionsGrantedToMe: Ref<GrantedPermission[]> = ref([]);
+rid.permissions.granted.list().then((response) => {
+  console.log("permissions granted to me", response);
+  permissionsGrantedToMe.value = response;
 });
 
 /**
@@ -70,17 +59,17 @@ async function submitCreateLink() {
   createLinkButtonText.value = createLinkButtonTextUpdating;
   setTimeout(() => (createLinkButtonText.value = createLinkButtonTextInitial), STATE_CHANGE_DURATION_MS);
 
-  const permissionCondition: PermissionCondition = {
-    rowId: resourceInputValue.value,
+  const filterObject: FilterObject = {
+    id: resourceInputValue.value,
   };
 
   const permission: PermissionTemplate = {
-    tableName: LISTS_TABLE_NAME,
+    collectionName: LISTS_COLLECTION_NAME,
     types: [PermissionType.READ, PermissionType.INSERT, PermissionType.UPDATE, PermissionType.DELETE],
-    condition: permissionCondition,
+    filter: filterObject,
   };
 
-  const link = await rid.sharing.createLink(permission, limitInputValue.value);
+  const link = await rid.permissions.links.create(permission, limitInputValue.value);
   console.log("createLink response", link);
 
   // TODO add link to local state? Is ID returned
@@ -89,14 +78,20 @@ async function submitCreateLink() {
 }
 
 function deletePermission(permissionId: string) {
-  rid.sharing.delete({ permissionId }).then((res) => {
-    console.log("sharing.delete res", res);
+  rid.permissions.delete(permissionId).then((res) => {
+    console.log("delete permission res", res);
+  });
+}
+
+function deleteLink(linkId: string) {
+  rid.permissions.links.delete(linkId).then((res) => {
+    console.log("deleted link res:", res);
   });
 }
 
 function deleteShared(permissionId: string) {
-  rid.sharing.deleteShared(permissionId).then((res) => {
-    console.log("sharing.deleteShared res", res);
+  rid.permissions.granted.delete(permissionId).then((res) => {
+    console.log("delete granted (shared with me) permission. res", res);
   });
 }
 
@@ -114,17 +109,18 @@ async function submitShareWithUser() {
   shareButtonText.value = shareButtonTextUpdating;
   setTimeout(() => (shareButtonText.value = shareButtonTextInitial), STATE_CHANGE_DURATION_MS);
 
-  const permissionCondition: PermissionCondition = {
-    rowId: resourceInputValue.value,
+  const filterObject: FilterObject = {
+    id: resourceInputValue.value,
   };
 
-  const permission: PermissionTemplate = {
-    tableName: LISTS_TABLE_NAME,
+  const permission: Permission = {
+    collectionName: LISTS_COLLECTION_NAME,
+    userId: userIdInputValue.value,
     types: [PermissionType.READ, PermissionType.INSERT, PermissionType.UPDATE, PermissionType.DELETE],
-    condition: permissionCondition,
+    filter: filterObject,
   };
 
-  const response = await rid.sharing.withUser(userIdInputValue.value, permission);
+  const response = await rid.permissions.create(permission);
 
   console.log(response);
 
@@ -133,11 +129,11 @@ async function submitShareWithUser() {
 </script>
 
 <template>
-  <header class="contacts-header">
+  <header class="sharing-header">
     <h1>Sharing</h1>
   </header>
 
-  <div class="contacts-grid">
+  <div class="sharing-grid">
     <!-- Form to explicitly share -->
     <div class="card">
       <h2>Share List with User</h2>
@@ -152,16 +148,6 @@ async function submitShareWithUser() {
           >
             <option disable value="">Select a list to share</option>
             <option v-for="list in listsStore.getMyLists" :key="list.id" :value="list.id">{{ list.name }}</option>
-          </select>
-        </div>
-
-        <div v-if="contacts && contacts.length > 0" class="form-control">
-          <label class="form-control-label" for="contact">Contact</label>
-          <select id="contact" v-model="userIdInputValue" class="select-input input-has-border-light is-full-width">
-            <option disable value="">Select a contact</option>
-            <option v-for="contact of contacts" :key="contact.id" :value="contact.contactId">
-              {{ contact.contactId }}
-            </option>
           </select>
         </div>
 
@@ -211,27 +197,25 @@ async function submitShareWithUser() {
       </form>
     </div>
 
-    <!-- linkLinks -->
     <div class="card">
-      <h2>Links (listLinks)</h2>
-      <ul class="contacts-list list-reset">
+      <h2>Links</h2>
+      <ul class="sharing-list list-reset">
         <li v-for="l in links" :key="l.id">
           <div>
             <a href="{{ baseUrl }}{{ l.id }}">{{ baseUrl }}{{ l.id }}</a>
             <div>{{ l }}</div>
           </div>
           <div class="button-list">
-            <button class="button button-danger" @click="deletePermission(l.permissionId)">Delete Permission</button>
+            <button class="button button-danger" @click="deleteLink(l.id)">Delete Link</button>
           </div>
         </li>
       </ul>
     </div>
 
-    <!-- listShared -->
     <div class="card">
-      <h2>Shared with Me (listShared)</h2>
-      <ul class="contacts-list list-reset">
-        <li v-for="l in itemsShared" :key="l.id">
+      <h2>Permissions (Granted To Me)</h2>
+      <ul class="sharing-list list-reset">
+        <li v-for="l in permissionsGrantedToMe" :key="l.id">
           <div>{{ l }}</div>
           <div class="button-list">
             <button class="button button-danger" @click="deleteShared(l.permissionId)">Delete Shared</button>
@@ -240,14 +224,14 @@ async function submitShareWithUser() {
       </ul>
     </div>
 
-    <!-- list -->
     <div class="card">
-      <h2>Permission (list)</h2>
-      <ul class="contacts-list list-reset">
+      <h2>Permissions (I've granted)</h2>
+      <ul class="sharing-list list-reset">
         <li v-for="p in permissions" :key="p.id">
           <div>{{ p }}</div>
           <div class="button-list">
-            <button class="button button-danger" @click="deletePermission(p.id)">Delete Permission</button>
+            <!-- TODO: ID should always be present -->
+            <button class="button button-danger" @click="deletePermission(p.id || '')">Delete Permission</button>
           </div>
         </li>
       </ul>

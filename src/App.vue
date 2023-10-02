@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { RouterLink, RouterView } from "vue-router";
-import { rid, syncData } from "@/rethinkid";
+import { rid } from "@/rethinkid";
 import { useUserStore } from "@/stores/user.js";
 import { useListsStore } from "@/stores/lists";
 import { useNotificationsStore } from "@/stores/notifications";
@@ -12,117 +12,39 @@ const router = useRouter();
 
 const loading = ref(true);
 
+console.log("ENV", import.meta.env.MODE);
+
 const accountDropdownIsVisible = ref(false);
 
 const userStore = useUserStore();
 const listsStore = useListsStore();
 const notificationsStore = useNotificationsStore();
 
-const online = ref(window.navigator.onLine);
-window.addEventListener("online", () => {
-  online.value = true;
+userStore.listenOnline();
 
-  // poll till connected
-  function pollConnectSync() {
-    console.log("pollConnectSync");
-    rid.tables
-      .list()
-      .then((res) => {
-        console.log("sync poll list tables res", res);
-        console.log("Could list tables, we're connected. Sync!");
-        syncData().then(() => listsStore.removeNeedsSync());
-      })
-      .catch((e) => {
-        console.log("sync poll list tables error, re-try in a bit", e.message);
-        setTimeout(() => {
-          console.log("retry");
-          pollConnectSync();
-        }, 500);
-      });
-  }
-  pollConnectSync();
-});
-window.addEventListener("offline", () => (online.value = false));
-
+// TODO could wrap all this in rid.updateOptions onLogin maybe
 async function onLogin() {
   userStore.setLoggedIn(true);
 
   await userStore.fetchUserInfo();
-  await userStore.fetchSettings();
 
-  // Receive contact connection requests
-  rid.contacts.onConnectionRequest(() => {
-    notificationsStore.addNotification("Contact connection request received.");
+  rid.onApiConnect(() => {
+    console.log("onApiConnect. Sync!");
+    listsStore.syncLists();
   });
 
-  await listsStore.fetchLists();
-  await listsStore.fetchSharedLists();
+  rid.onApiConnectError((rid, message) => {
+    console.log("On update: onApiConnectError. Message:", message);
+    if (message.includes("invalid_token")) {
+      rid.logOut();
+    }
+  });
+
+  await listsStore.syncLists();
+  await listsStore.mirrorMyLists();
+  await listsStore.mirrorSharedWithMeLists();
 
   loading.value = false;
-
-  // type Changes = {
-  //   new_val: null | object;
-  //   old_val: null | object;
-  // };
-
-  // function isAddedChange(changes: Changes) {
-  //   return changes.new_val && changes.old_val === null;
-  // }
-  // function isDeletedChange(changes: Changes) {
-  //   return changes.new_val === null && changes.old_val;
-  // }
-  // function isUpdateChange(changes: Changes) {
-  //   return changes.new_val && changes.old_val;
-  // }
-
-  // Tidy all this
-  // Go to HOME, make HOME lists view
-  // syncData()
-  //   .then(() => {
-  //     return listsStore.fetchLists();
-  //   })
-  //   .then(() => {
-  //     // Subscribe to my lists table changes
-  //     if (window.navigator.onLine) {
-  //       listsTable.subscribe({}, (changes) => {
-  //         if (isAddedChange(changes)) {
-  //           console.log("Added", changes.new_val);
-  //         }
-  //         if (isDeletedChange(changes)) {
-  //           console.log("One of my lists was deleted", changes.old_val);
-  //           const deletedList = changes.old_val as List;
-
-  //           // Remove list from local state
-  //           if (!listsStore.lists) return;
-
-  //           listsStore.lists = listsStore.lists.filter((list) => list.id !== deletedList.id);
-  //         }
-  //         if (isUpdateChange(changes)) {
-  //           console.log("Updated", changes.new_val);
-  //           const updatedList = changes.new_val as List;
-
-  //           if (!listsStore.lists) return;
-
-  //           listsStore.lists = listsStore.lists.map((list) => {
-  //             if (list.id === updatedList.id) {
-  //               return updatedList;
-  //             }
-  //             return list;
-  //           });
-  //         }
-  //       });
-  //     }
-
-  //     if (listsStore.lists === null) return;
-  //     loading.value = false;
-
-  //     // Redirect the home route to the primary list
-  //     if (route.name !== HOME) return;
-
-  //     const primaryListId = userStore.primaryListId;
-  //     if (!primaryListId) return;
-  //     router.push({ name: LIST, params: { listId: primaryListId } });
-  //   });
 }
 
 function goToFromAccountDropdown(routeName: string) {
@@ -133,11 +55,17 @@ function goToFromAccountDropdown(routeName: string) {
 if (rid.isLoggedIn()) {
   onLogin();
 } else {
+  userStore.setLoggedIn(false);
   loading.value = false;
 
   rid.onLogin(async () => {
     onLogin();
   });
+}
+
+function logOut() {
+  console.log("logOut");
+  rid.logOut();
 }
 
 function toggleAccountDropdown() {
@@ -189,7 +117,7 @@ onMounted(() => {
         </RouterLink>
 
         <div class="header-region-right">
-          <div v-if="!online" class="header-item-highlight header-text-item">Offline</div>
+          <div v-if="!userStore.online" class="header-item-highlight header-text-item">Offline</div>
           <template v-if="!userStore.loggedIn">
             <button @click="rid.login()" class="header-button link-button">Get Started</button>
             <button @click="rid.login()" class="header-button link-button">Sign In</button>
@@ -229,9 +157,11 @@ onMounted(() => {
                     {{ copyButtonText }}
                   </button>
                 </li>
-                <li><button @click="goToFromAccountDropdown(CONTACTS)" class="link-button">Contacts</button></li>
-                <li><button @click="goToFromAccountDropdown(SHARING)" class="link-button">Sharing</button></li>
-                <li><button @click="rid.logOut()" class="link-button">Sign out</button></li>
+                <template v-if="userStore.online">
+                  <li><button @click="goToFromAccountDropdown(CONTACTS)" class="link-button">Contacts</button></li>
+                  <li><button @click="goToFromAccountDropdown(SHARING)" class="link-button">Sharing</button></li>
+                </template>
+                <li><button @click="logOut()" class="link-button">Sign out</button></li>
               </ul>
             </div>
           </template>

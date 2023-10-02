@@ -1,74 +1,91 @@
 import { defineStore } from "pinia";
-import { LISTS_TABLE_NAME, rid } from "@/rethinkid";
+import { rid } from "@/rethinkid";
+import type { Changes } from "@/rethinkid";
 import { mirror } from "@/pinia/sdk-store-sync-method";
 import { useUserStore } from "@/stores/user";
 import type { List, NewList, ListItem } from "@/types";
-import { getOwnedOrSharedListsTable, listsTable, replaceListAPIOrLocalData } from "@/rethinkid";
 import { v4 as uuidv4 } from "uuid";
+import type { CollectionAPI, RethinkID } from "@rethinkid/rethinkid-js-sdk";
+import type { GrantedPermission } from "@rethinkid/rethinkid-js-sdk/dist/types/types";
+import { useStorage } from "@vueuse/core";
+
+export const LISTS_COLLECTION_NAME = "lists";
+
+const myListsCollection = rid.collection(LISTS_COLLECTION_NAME);
+
+function getOwnedOrSharedListsCollection(ownerId: string): CollectionAPI {
+  return rid.collection(LISTS_COLLECTION_NAME, { userId: ownerId });
+}
+
+function replaceListOnline(list: List) {
+  if (window.navigator.onLine) {
+    const listsCollection = getOwnedOrSharedListsCollection(list.ownerId);
+    listsCollection.replaceOne(list.id, list);
+  }
+}
+
+function touchList(list: List) {
+  list.lastUpdated = Date.now();
+}
 
 export const useListsStore = defineStore("lists", {
   state: () => ({
-    lists: [] as List[],
-    // listsOrder: [] as string[], // list IDs
+    lists: useStorage("lists", [] as List[]),
   }),
   actions: {
-    async fetchLists(): Promise<void> {
-      mirror(this.lists, listsTable);
-    },
-    async fetchSharedLists(): Promise<void> {
-      rid.sharing.onShared(async (grantedPermission) => {
-        console.log("listShared: grantedPermission", grantedPermission);
-        const hostId = grantedPermission.hostId;
-        const tableName = grantedPermission.permission?.tableName;
-        const rowId = grantedPermission.permission?.condition?.rowId;
+    async syncLists(optionCallbackRid?: RethinkID): Promise<void> {
+      console.log("SyncLists...");
 
-        if (!hostId) return;
-        if (tableName !== LISTS_TABLE_NAME) return;
+      if (!window.navigator.onLine) return;
 
-        const table = rid.table(tableName, { userId: hostId });
-        mirror(this.lists, table, { rowId });
+      const importOrParamRid = optionCallbackRid || rid;
+
+      const ownedAndSharedRemoteLists: List[] = [];
+
+      // Get my lists
+      const myRemoteLists = (await myListsCollection.getAll()) as List[];
+      ownedAndSharedRemoteLists.push(...myRemoteLists);
+
+      // Get lists shared-with-me
+      const permissionsGrantedToMe = await importOrParamRid.permissions.granted.list({
+        collectionName: LISTS_COLLECTION_NAME,
       });
+
+      for (const grantedPermission of permissionsGrantedToMe) {
+        const collection = getOwnedOrSharedListsCollection(grantedPermission.ownerId);
+        const docId = grantedPermission.permission?.filter?.id as string | undefined;
+        if (!docId) continue;
+        const remoteList = (await collection.getOne(docId)) as List;
+        ownedAndSharedRemoteLists.push(remoteList);
+      }
+
+      console.log("ownedAndSharedRemoteLists", ownedAndSharedRemoteLists);
+
+      // Sync
+      for (const localList of this.lists) {
+        console.log("local list name:", localList.name);
+        const remoteList = ownedAndSharedRemoteLists.find((remoteList) => remoteList.id === localList.id);
+
+        if (!remoteList) continue;
+        // Only syncing updates, not adding or deleting lists for simplicity
+
+        // Debuging, can remove
+        if (localList.lastUpdated > remoteList.lastUpdated) {
+          console.log("- local version most recently updated:", new Date(localList.lastUpdated).toLocaleString());
+        } else {
+          console.log("- remote version most recently updated:", new Date(remoteList.lastUpdated).toLocaleString());
+        }
+
+        const collection = getOwnedOrSharedListsCollection(localList.ownerId);
+        const mostRecentlyUpdatedList = localList.lastUpdated > remoteList.lastUpdated ? localList : remoteList;
+        collection.replaceOne(localList.id, mostRecentlyUpdatedList);
+      }
     },
-    // TODO re-add list order...
-    // TODO re-add localStorage
-    // async fetchLists(): Promise<void> {
-    //   let lists = [] as List[];
-    //   try {
-    //     lists = (await getAPIOrLocalData(listsConfig)) as List[];
-    //   } catch (e) {
-    //     console.log("read lists error", e);
-    //   }
+    async mirrorMyLists(): Promise<void> {
+      if (!window.navigator.onLine) return;
 
-    //   if (lists.length === 0) {
-    //     // console.log("create default list");
-    //     // Create default list
-    //     await this.createList("Groceries");
-    //     return;
-    //   }
-
-    //   let listsOrderDoc = null;
-    //   try {
-    //     listsOrderDoc = (await getAPIOrLocalData(listsOrderDocConfig)) as OrderTableDoc;
-    //   } catch (e) {
-    //     console.log("error reading order", e);
-    //   }
-
-    //   if (!listsOrderDoc) {
-    //     console.log("listsOrderDoc null, return");
-    //     return;
-    //   }
-
-    //   this.listsOrder = listsOrderDoc.order;
-
-    //   const orderedLists = listsOrderDoc.order.map((id) => {
-    //     const foundList = lists.find((list) => {
-    //       return list.id === id;
-    //     });
-    //     return foundList;
-    //   }) as List[];
-
-    //   this.lists = orderedLists;
-    // },
+      mirror(this.lists, myListsCollection);
+    },
     async createList(name: string): Promise<string> {
       const userStore = useUserStore();
 
@@ -76,76 +93,58 @@ export const useListsStore = defineStore("lists", {
         name,
         items: [],
         archived: false,
-        userIDsWithAccess: [],
-        hostId: userStore.userId,
+        ownerId: userStore.userId,
+        lastUpdated: Date.now(),
       };
 
-      const id = await listsTable.insert(newList);
-
-      const firstId = id[0];
-
-      // if (!this.lists || (this.lists && this.lists.length === 0)) {
-      //   await userStore.updatePrimaryListId(firstId);
-      // }
-
-      // this.listsOrder.push(firstId);
-      // const orderDoc: OrderTableDoc = { id: LISTS_TABLE_NAME, order: this.listsOrder };
-      // await orderTable.update(orderDoc);
-
-      // const list: List = {
-      //   id: firstId,
-      //   ...newList,
-      // };
-
-      // if (!this.lists) this.lists = [];
-
-      // this.lists.push(list);
-
-      return firstId;
+      return myListsCollection.insertOne(newList);
     },
-    async updateList(updatedList: List): Promise<void> {
-      const listsTable = await getOwnedOrSharedListsTable(updatedList);
-      listsTable.update(updatedList);
+    async mirrorSharedWithMeLists(): Promise<void> {
+      if (!window.navigator.onLine) return;
+
+      const permissionsGrantedToMe = await rid.permissions.granted.list({
+        collectionName: LISTS_COLLECTION_NAME,
+      });
+
+      const mirrorGrantedPermission = (grantedPermission: GrantedPermission) => {
+        const collection = getOwnedOrSharedListsCollection(grantedPermission.ownerId);
+
+        const docId = grantedPermission.permission?.filter?.id as string | undefined;
+        if (!docId) return;
+
+        mirror(this.lists, collection, { docId });
+      };
+
+      for (const grantedPermission of permissionsGrantedToMe) {
+        mirrorGrantedPermission(grantedPermission);
+      }
+
+      // Subscribe to new permissions
+      rid.permissions.granted.subscribe(
+        {
+          collectionName: LISTS_COLLECTION_NAME,
+        },
+        (changes: Changes) => {
+          console.log("Granted Permission added or updated", changes);
+          if (changes.new_val) {
+            mirrorGrantedPermission(changes.new_val as GrantedPermission);
+          }
+        },
+      );
+    },
+    updateList(updatedList: List): void {
+      const listsCollection = getOwnedOrSharedListsCollection(updatedList.ownerId);
+      touchList(updatedList);
+      listsCollection.updateOne(updatedList.id, updatedList);
     },
     async deleteList(deletedList: List): Promise<void> {
-      // if (!this.lists) return;
-
-      // this.lists = this.lists.filter((list) => {
-      //   return list.id !== deletedList.id;
-      // });
-
-      const listsTable = await getOwnedOrSharedListsTable(deletedList);
-      listsTable.delete({ rowId: deletedList.id });
-
-      // const index = this.listsOrder.indexOf(deletedList.id);
-      // if (index > -1) {
-      //   this.listsOrder.splice(index, 1);
-      // }
-      // const orderDoc: OrderTableDoc = { id: LISTS_TABLE_NAME, order: this.listsOrder };
-
-      // try {
-      //   await orderTable.replace(orderDoc);
-      // } catch (e) {
-      //   console.log("ordertable update e", e);
-      // }
-
-      // try {
-      //   (await orderTable.read({ rowId: LISTS_TABLE_NAME })) as OrderTableDoc;
-      // } catch (e) {
-      //   console.log("error reading order", e);
-      // }
-
-      // // Set as new primary list
-      // const userStore = useUserStore();
-      // if (deletedList.id === userStore.primaryListId) {
-      //   userStore.updatePrimaryListId(this.listsOrder[0]);
-      // }
-    },
-    removeNeedsSync(): void {
-      console.log("removeNeedsSync");
-      if (!this.lists) return;
-      for (const list of this.lists) {
-        if (list.needsSync) delete list.needsSync;
+      console.log("deleteList:");
+      try {
+        const listsCollection = getOwnedOrSharedListsCollection(deletedList.ownerId);
+        await listsCollection.deleteOne(deletedList.id);
+      } catch (error: any) {
+        // List possibly loaded from localStorage for a user that no longer exists
+        this.lists = this.lists.filter((list) => list.id !== deletedList.id);
       }
     },
     async addItem(listId: string, itemName: string): Promise<void> {
@@ -165,7 +164,9 @@ export const useListsStore = defineStore("lists", {
 
       list.items.push(newItem);
 
-      await replaceListAPIOrLocalData(list);
+      touchList(list);
+
+      await replaceListOnline(list);
     },
     async updateItem(listId: string, updatedItem: ListItem) {
       const list = this.getList(listId);
@@ -179,7 +180,13 @@ export const useListsStore = defineStore("lists", {
         return item;
       });
 
-      await replaceListAPIOrLocalData(list);
+      console.log("list before", list.lastUpdated);
+
+      touchList(list);
+
+      console.log("list after", list.lastUpdated);
+
+      await replaceListOnline(list);
     },
     async deleteItem(listId: string, itemId: string) {
       const list = this.getList(listId);
@@ -188,11 +195,9 @@ export const useListsStore = defineStore("lists", {
 
       list.items = list.items.filter((item) => item.id !== itemId);
 
-      try {
-        await replaceListAPIOrLocalData(list);
-      } catch (e) {
-        console.log("error deleting item", e);
-      }
+      touchList(list);
+
+      await replaceListOnline(list);
     },
   },
   getters: {
@@ -260,7 +265,7 @@ export const useListsStore = defineStore("lists", {
 
       const userStore = useUserStore();
 
-      return state.lists.filter((list) => list.hostId === userStore.userId);
+      return state.lists.filter((list) => list.ownerId === userStore.userId);
     },
   },
 });
