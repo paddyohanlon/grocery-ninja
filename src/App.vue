@@ -22,14 +22,13 @@ const notificationsStore = useNotificationsStore();
 
 userStore.listenOnline();
 
-// TODO could wrap all this in rid.updateOptions onLogin maybe
 async function onLogin() {
   userStore.setLoggedIn(true);
 
   await userStore.fetchUserInfo();
 
   rid.onApiConnect(() => {
-    console.log("onApiConnect. Sync!");
+    console.log("On update: onApiConnect. Sync!");
     listsStore.syncLists();
   });
 
