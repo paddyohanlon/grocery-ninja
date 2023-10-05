@@ -14,7 +14,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "@rethinkid/rethinkid-js-sdk": "^0.13.2",
+    "@rethinkid/rethinkid-js-sdk": "^0.14.0",
     "@vueuse/core": "^10.4.1",
     "pinia": "^2.0.32",
     "query-string": "^7.1.3",

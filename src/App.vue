@@ -27,12 +27,12 @@ async function onLogin() {
 
   await userStore.fetchUserInfo();
 
-  rid.onApiConnect(() => {
+  rid.onApiConnect(async () => {
     console.log("On update: onApiConnect. Sync!");
     listsStore.syncLists();
   });
 
-  rid.onApiConnectError((rid, message) => {
+  rid.onApiConnectError(async (rid, message) => {
     console.log("On update: onApiConnectError. Message:", message);
     if (message.includes("invalid_token")) {
       rid.logOut();

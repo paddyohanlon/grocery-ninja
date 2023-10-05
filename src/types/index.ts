@@ -10,6 +10,9 @@ export interface List {
   lastUpdated: number;
 }
 
+/**
+ * Use when creating a List, where an `id` is not required
+ */
 export type NewList = Omit<List, "id">;
 
 export interface ListItem {

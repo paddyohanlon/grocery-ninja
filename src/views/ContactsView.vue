@@ -18,13 +18,28 @@ rid.social.listContacts().then((fetchedContacts) => {
   <div>
     <header class="sharing-header">
       <h1>Contacts</h1>
-
-      <ul class="list-reset">
-        <li v-for="contact of contacts" :key="contact.id">
-          {{ contact }}
-        </li>
-      </ul>
     </header>
+
+    <div class="sharing-grid">
+      <div class="card">
+        <h2>Modal</h2>
+        <ul class="list-reset">
+          <li><button class="button" @click="rid.social.openModal()">Open Social Modal</button></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <ul>
+          <li v-for="c of contacts" :key="c.id">
+            <ul class="list-reset">
+              <li>Contact's ID: {{ c.contactId }}</li>
+              <li>Connected: {{ c.connected }}</li>
+              <li>Requested: {{ c.requested }}</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
   </div>
 </template>
 

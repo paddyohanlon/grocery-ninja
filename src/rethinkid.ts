@@ -4,7 +4,7 @@ import type { Options } from "@rethinkid/rethinkid-js-sdk";
 const config: Options = {
   appId: import.meta.env.VITE_RETHINKID_APP_ID,
   loginRedirectUri: import.meta.env.VITE_RETHINKID_REDIRECT_URI,
-  onApiConnectError: (rid, message) => {
+  onApiConnectError: async (rid, message) => {
     console.log("On Init: onApiConnectError. Message:", message);
     if (message.includes("invalid_token")) {
       rid.logOut();

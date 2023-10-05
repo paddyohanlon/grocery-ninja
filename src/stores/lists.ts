@@ -5,7 +5,7 @@ import { mirror } from "@/pinia/sdk-store-sync-method";
 import { useUserStore } from "@/stores/user";
 import type { List, NewList, ListItem } from "@/types";
 import { v4 as uuidv4 } from "uuid";
-import type { CollectionAPI, RethinkID } from "@rethinkid/rethinkid-js-sdk";
+import type { CollectionAPI } from "@rethinkid/rethinkid-js-sdk";
 import type { GrantedPermission } from "@rethinkid/rethinkid-js-sdk/dist/types/types";
 import { useStorage } from "@vueuse/core";
 
@@ -13,7 +13,7 @@ export const LISTS_COLLECTION_NAME = "lists";
 
 const myListsCollection = rid.collection(LISTS_COLLECTION_NAME);
 
-function getOwnedOrSharedListsCollection(ownerId: string): CollectionAPI {
+export function getOwnedOrSharedListsCollection(ownerId: string): CollectionAPI {
   return rid.collection(LISTS_COLLECTION_NAME, { userId: ownerId });
 }
 
@@ -33,12 +33,10 @@ export const useListsStore = defineStore("lists", {
     lists: useStorage("lists", [] as List[]),
   }),
   actions: {
-    async syncLists(optionCallbackRid?: RethinkID): Promise<void> {
-      console.log("SyncLists...");
+    async syncLists(): Promise<void> {
+      console.log("syncLists: Sync local and remote lists");
 
       if (!window.navigator.onLine) return;
-
-      const importOrParamRid = optionCallbackRid || rid;
 
       const ownedAndSharedRemoteLists: List[] = [];
 
@@ -47,7 +45,7 @@ export const useListsStore = defineStore("lists", {
       ownedAndSharedRemoteLists.push(...myRemoteLists);
 
       // Get lists shared-with-me
-      const permissionsGrantedToMe = await importOrParamRid.permissions.granted.list({
+      const permissionsGrantedToMe = await rid.permissions.granted.list({
         collectionName: LISTS_COLLECTION_NAME,
       });
 
@@ -59,23 +57,25 @@ export const useListsStore = defineStore("lists", {
         ownedAndSharedRemoteLists.push(remoteList);
       }
 
-      console.log("ownedAndSharedRemoteLists", ownedAndSharedRemoteLists);
-
-      // Sync
+      // Sync local with remote
       for (const localList of this.lists) {
-        console.log("local list name:", localList.name);
         const remoteList = ownedAndSharedRemoteLists.find((remoteList) => remoteList.id === localList.id);
 
-        if (!remoteList) continue;
-        // Only syncing updates, not adding or deleting lists for simplicity
+        // if this local list has no corresponding remote list
+        // and I don't own this list, it's probably an artifact from
+        // a different account. Delete it.
+        if (!remoteList) {
+          const userInfo = await rid.social.getUser();
+          const myUserId = userInfo.id;
 
-        // Debuging, can remove
-        if (localList.lastUpdated > remoteList.lastUpdated) {
-          console.log("- local version most recently updated:", new Date(localList.lastUpdated).toLocaleString());
-        } else {
-          console.log("- remote version most recently updated:", new Date(remoteList.lastUpdated).toLocaleString());
+          if (localList.ownerId !== myUserId) {
+            this.lists = this.lists.filter((list) => list.id !== localList.id);
+          }
+
+          continue;
         }
 
+        // Only syncing updates, not adding or deleting lists for simplicity
         const collection = getOwnedOrSharedListsCollection(localList.ownerId);
         const mostRecentlyUpdatedList = localList.lastUpdated > remoteList.lastUpdated ? localList : remoteList;
         collection.replaceOne(localList.id, mostRecentlyUpdatedList);
