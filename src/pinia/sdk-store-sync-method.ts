@@ -6,8 +6,8 @@ import type { CollectionAPI } from "@rethinkid/rethinkid-js-sdk";
 // Move to SDK, publish test and all that.
 
 type Changes = {
-  new_val: null | object;
-  old_val: null | object;
+  newDoc: null | object;
+  oldDoc: null | object;
 };
 
 type ResourceOptions = {
@@ -82,19 +82,19 @@ class Resource {
 
   private _subscribe() {
     const listener = (changes: Changes) => {
-      const isAdded = (changes: Changes) => changes.new_val && changes.old_val === null;
-      const isUpdated = (changes: Changes) => changes.new_val && changes.old_val;
-      const isDeleted = (changes: Changes) => changes.new_val === null && changes.old_val;
+      const isAdded = (changes: Changes) => changes.newDoc && changes.oldDoc === null;
+      const isUpdated = (changes: Changes) => changes.newDoc && changes.oldDoc;
+      const isDeleted = (changes: Changes) => changes.newDoc === null && changes.oldDoc;
 
       if (isAdded(changes)) {
-        console.log("Mirror added", changes);
-        this._addDoc(changes.new_val);
+        // console.log("Mirror added", changes);
+        this._addDoc(changes.newDoc);
       } else if (isUpdated(changes)) {
-        console.log("Mirror updated", changes);
-        this._updateDoc(changes.new_val);
+        // console.log("Mirror updated", changes);
+        this._updateDoc(changes.newDoc);
       } else if (isDeleted(changes)) {
-        console.log("Mirror deleted", changes);
-        this._deleteDoc(changes.old_val);
+        // console.log("Mirror deleted", changes);
+        this._deleteDoc(changes.oldDoc);
       }
     };
 

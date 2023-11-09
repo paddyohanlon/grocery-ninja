@@ -1,5 +1,5 @@
 /* eslint-env serviceworker */
-const version = "v1";
+const version = "v2";
 const staticCacheName = version + "_staticfiles";
 const urlsToCache = [
   /* populated by update-service-worker.js, run by the `postbuild` command */

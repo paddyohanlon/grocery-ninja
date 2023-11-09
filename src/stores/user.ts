@@ -6,6 +6,8 @@ export const useUserStore = defineStore("user", {
   state: () => ({
     loggedIn: useStorage("loggedIn", false),
     userId: useStorage("userId", ""),
+    name: useStorage("name", ""),
+    email: useStorage("email", ""),
     online: window.navigator.onLine,
   }),
   actions: {
@@ -21,6 +23,8 @@ export const useUserStore = defineStore("user", {
 
       const userInfo = await rid.social.getUser();
       this.userId = userInfo.id;
+      this.name = userInfo.name || "";
+      this.email = userInfo.email || "";
     },
   },
 });

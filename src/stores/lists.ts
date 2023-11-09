@@ -34,7 +34,7 @@ export const useListsStore = defineStore("lists", {
   }),
   actions: {
     async syncLists(): Promise<void> {
-      console.log("syncLists: Sync local and remote lists");
+      // console.log("syncLists: Sync local and remote lists");
 
       if (!window.navigator.onLine) return;
 
@@ -126,8 +126,8 @@ export const useListsStore = defineStore("lists", {
         },
         (changes: Changes) => {
           console.log("Granted Permission added or updated", changes);
-          if (changes.new_val) {
-            mirrorGrantedPermission(changes.new_val as GrantedPermission);
+          if (changes.newDoc) {
+            mirrorGrantedPermission(changes.newDoc as GrantedPermission);
           }
         },
       );
@@ -180,11 +180,7 @@ export const useListsStore = defineStore("lists", {
         return item;
       });
 
-      console.log("list before", list.lastUpdated);
-
       touchList(list);
-
-      console.log("list after", list.lastUpdated);
 
       await replaceListOnline(list);
     },

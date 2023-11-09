@@ -60,17 +60,17 @@ watch(
 
 // Template elements with a `ref` attribute
 type HTMLRef = null | HTMLElement;
-const addItemButton: Ref<HTMLRef> = ref(null);
+const addItemInput: Ref<HTMLRef> = ref(null);
 
-function focusElement(element: HTMLRef): void {
-  if (!element) return;
-  element.focus();
+function focusAddItemInput(): void {
+  if (!addItemInput.value) return;
+  addItemInput.value.focus();
 }
 
 function submitAddItem() {
   listsStore.addItem(listIdParam.value, newItemName.value);
   newItemName.value = "";
-  focusElement(addItemButton.value);
+  focusAddItemInput();
 }
 
 function toggleCheckedList() {
@@ -172,7 +172,7 @@ function submitUpdateList() {
             <label>
               <span class="screen-reader-text">Add an item</span>
               <input
-                ref="addItemButton"
+                ref="addItemInput"
                 v-model="newItemName"
                 type="text"
                 class="item-name-input text-input"
@@ -193,7 +193,7 @@ function submitUpdateList() {
                 :class="{ 'is-active': itemIdParam === item.id }"
                 class="item"
               >
-                <CheckItemButton :listId="listIdParam" :item="item" @item-check-toggled="focusElement(addItemButton)" />
+                <CheckItemButton :listId="listIdParam" :item="item" @item-check-toggled="focusAddItemInput()" />
                 <RouterLink :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }">
                   {{ item.name }}
                 </RouterLink>
@@ -226,11 +226,7 @@ function submitUpdateList() {
                   :class="{ 'is-active': itemIdParam === item.id }"
                   class="item"
                 >
-                  <CheckItemButton
-                    :listId="listIdParam"
-                    :item="item"
-                    @item-check-toggled="focusElement(addItemButton)"
-                  />
+                  <CheckItemButton :listId="listIdParam" :item="item" @item-check-toggled="focusAddItemInput()" />
                   <RouterLink :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }">
                     {{ item.name }}
                   </RouterLink>

@@ -101,6 +101,15 @@ function onEscapeKeyDown(event: any) {
   }
 }
 
+async function login() {
+  try {
+    await rid.login();
+  } catch (e: any) {
+    console.log("e.message", e.message);
+    notificationsStore.addNotification(e.message);
+  }
+}
+
 onMounted(() => {
   window.addEventListener("click", onWindowClick);
   window.addEventListener("keydown", onEscapeKeyDown);
@@ -118,11 +127,10 @@ onMounted(() => {
         <div class="header-region-right">
           <div v-if="!userStore.online" class="header-item-highlight header-text-item">Offline</div>
           <template v-if="!userStore.loggedIn">
-            <button @click="rid.login()" class="header-button link-button">Get Started</button>
-            <button @click="rid.login()" class="header-button link-button">Sign In</button>
+            <button @click="login()" class="header-button link-button">Sign In</button>
           </template>
           <template v-else>
-            <div class="header-text-item">{{ userStore.userId }}</div>
+            <div class="header-text-item">{{ userStore.email }}</div>
             <button
               @click.stop="toggleAccountDropdown"
               class="header-button link-button"
@@ -150,6 +158,7 @@ onMounted(() => {
               aria-labelledby="toggle-account-button"
             >
               <ul class="account-dropdown-list list-reset">
+                <li>{{ userStore.name }}</li>
                 <li>
                   {{ userStore.userId }}
                   <button class="button is-small-text" @click="copyToClipboard">

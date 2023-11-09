@@ -32,7 +32,7 @@ rid.social.listContacts().then((fetchedContacts) => {
         <ul>
           <li v-for="c of contacts" :key="c.id">
             <ul class="list-reset">
-              <li>Contact's ID: {{ c.contactId }}</li>
+              <li>Contact's ID: {{ c.contactUserId }}</li>
               <li>Connected: {{ c.connected }}</li>
               <li>Requested: {{ c.requested }}</li>
             </ul>

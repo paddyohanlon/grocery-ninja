@@ -24,7 +24,6 @@ const item = ref(props.item);
 function toggleItemChecked() {
   item.value.checked = !item.value.checked;
   store.updateItem(props.listId, item.value);
-  console.log("toggle in component");
   emit("itemCheckToggled");
 }
 </script>
@@ -43,23 +42,11 @@ function toggleItemChecked() {
 
 <style scoped>
 .check-button {
-  /* border-radius: 10px;
-  border: 1px solid var(--color-green);
-  height: 18px;
-  width: 18px; */
   padding: 10px 15px;
   position: relative;
   text-decoration: none;
   z-index: 100;
 }
-/* .check-button:hover,
-.check-button-checked {
-  font-size: 0.9rem;
-  position: absolute;
-  top: 0;
-  left: 3px;
-  content: "\2713";
-} */
 
 .check-button:hover .check-button-circle:before,
 .check-button-checked .check-button-circle:before {

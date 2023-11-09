@@ -14,23 +14,22 @@ const config: Options = {
 
 if (import.meta.env.VITE_RETHINKID_USE_MOCK || import.meta.env.DEV) {
   console.log("Using mock urls in ENV:", import.meta.env.MODE);
-  config.oAuthUri = import.meta.env.VITE_RETHINKID_MOCK_SERVER_URL;
-  config.dataApiUri = import.meta.env.VITE_RETHINKID_MOCK_SERVER_URL;
+  config.rethinkIdUri = import.meta.env.VITE_RETHINKID_MOCK_SERVER_URL;
 }
 
 export const rid = new RethinkID(config);
 
 export type Changes = {
-  new_val: null | object;
-  old_val: null | object;
+  newDoc: null | object;
+  oldDoc: null | object;
 };
 
 export function isAddedChange(changes: Changes) {
-  return changes.new_val && changes.old_val === null;
+  return changes.newDoc && changes.oldDoc === null;
 }
 export function isDeletedChange(changes: Changes) {
-  return changes.new_val === null && changes.old_val;
+  return changes.newDoc === null && changes.oldDoc;
 }
 export function isUpdatedChange(changes: Changes) {
-  return changes.new_val && changes.old_val;
+  return changes.newDoc && changes.oldDoc;
 }
