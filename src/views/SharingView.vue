@@ -3,19 +3,19 @@ import { ref } from "vue";
 import type { Ref } from "vue";
 import { rid } from "@/rethinkid";
 import { LISTS_COLLECTION_NAME } from "@/stores/lists";
-import { PermissionType } from "@rethinkid/rethinkid-js-sdk";
-import type {
-  Link,
-  GrantedPermission,
-  Permission,
-  NewPermission,
-  PermissionTemplate,
-  FilterObject,
-} from "@rethinkid/rethinkid-js-sdk/dist/types/types/index";
 import { STATE_CHANGE_DURATION_MS } from "@/timing";
 import { useRoute } from "vue-router";
 import { useListsStore } from "@/stores/lists";
 import { useNotificationsStore } from "@/stores/notifications";
+import {
+  PermissionType,
+  type FilterObject,
+  type GrantedPermission,
+  type Link,
+  type Permission,
+  type PermissionTemplate,
+  type NewPermission,
+} from "@rethinkid/rethinkid-js-sdk";
 
 const route = useRoute();
 

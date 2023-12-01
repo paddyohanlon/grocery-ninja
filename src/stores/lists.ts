@@ -5,8 +5,7 @@ import { mirror } from "@/pinia/sdk-store-sync-method";
 import { useUserStore } from "@/stores/user";
 import type { List, NewList, ListItem } from "@/types";
 import { v4 as uuidv4 } from "uuid";
-import type { CollectionAPI } from "@rethinkid/rethinkid-js-sdk";
-import type { GrantedPermission } from "@rethinkid/rethinkid-js-sdk/dist/types/types";
+import type { CollectionAPI, GrantedPermission } from "@rethinkid/rethinkid-js-sdk";
 import { useStorage } from "@vueuse/core";
 
 export const LISTS_COLLECTION_NAME = "lists";

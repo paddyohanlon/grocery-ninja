@@ -98,6 +98,27 @@ function submitUpdateList() {
 
   listsStore.updateList(newList.value);
 }
+
+const commaSeparator = ",";
+
+function handleExportClick(): void {
+  const itemNames = listsStore.getUncheckedItems(listIdParam.value).map((item) => item.name);
+  const commaSeparatedNames = itemNames.join(commaSeparator);
+  console.log("Copied to clip board:", commaSeparatedNames);
+  navigator.clipboard.writeText(commaSeparatedNames);
+}
+
+function handleAddCommaSeparatedItems(): void {
+  const names = newItemName.value.split(commaSeparator);
+
+  for (const name of names) {
+    console.log(name);
+    listsStore.addItem(listIdParam.value, name);
+  }
+
+  newItemName.value = "";
+  focusAddItemInput();
+}
 </script>
 
 <template>
@@ -158,6 +179,9 @@ function submitUpdateList() {
                           >Share List</RouterLink
                         >
                       </li>
+                      <li>
+                        <button class="button" @click="handleExportClick()">Export Item Names</button>
+                      </li>
                     </ul>
                   </li>
                   <div class="danger-zone">
@@ -170,18 +194,21 @@ function submitUpdateList() {
 
           <form @submit.prevent="submitAddItem()" class="create-item-form">
             <label>
-              <span class="screen-reader-text">Add an item</span>
+              <span class="screen-reader-text">Add an item(s)</span>
               <input
                 ref="addItemInput"
                 v-model="newItemName"
                 type="text"
                 class="item-name-input text-input"
-                placeholder="Add an item"
+                placeholder="Add an item(s)"
                 required
               />
             </label>
             <div class="create-item-actions">
-              <button class="create-item-button button">Add</button>
+              <button @click="handleAddCommaSeparatedItems()" class="create-item-button button" type="button">
+                Add Comma Separated Items
+              </button>
+              <button class="create-item-button button" type="submit">Add</button>
             </div>
           </form>
 
