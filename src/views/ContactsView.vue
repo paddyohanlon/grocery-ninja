@@ -6,7 +6,7 @@ import type { Contact } from "@rethinkid/rethinkid-js-sdk";
 
 const contacts: Ref<Contact[]> = ref([]);
 
-rid.social.listContacts().then((fetchedContacts) => {
+rid.social.contacts.list().then((fetchedContacts) => {
   console.log("fetchedContacts", fetchedContacts);
   for (const contact of fetchedContacts) {
     contacts.value.push(contact);
@@ -32,9 +32,8 @@ rid.social.listContacts().then((fetchedContacts) => {
         <ul>
           <li v-for="c of contacts" :key="c.id">
             <ul class="list-reset">
-              <li>Contact's ID: {{ c.contactUserId }}</li>
+              <li>Contact: {{ c.user.name }} ({{ c.user.email }})</li>
               <li>Connected: {{ c.connected }}</li>
-              <li>Requested: {{ c.requested }}</li>
             </ul>
           </li>
         </ul>
