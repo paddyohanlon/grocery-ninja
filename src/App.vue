@@ -177,7 +177,7 @@ onMounted(() => {
       </header>
     </div>
 
-    <div class="loader" v-if="!loading"><span></span></div>
+    <div class="loader" v-if="loading"><span></span></div>
     <template v-else><RouterView /></template>
 
     <div
