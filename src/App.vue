@@ -177,7 +177,7 @@ onMounted(() => {
       </header>
     </div>
 
-    <div class="loading" v-if="loading">Loading...</div>
+    <div class="loader" v-if="!loading"><span></span></div>
     <template v-else><RouterView /></template>
 
     <div
@@ -195,9 +195,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.loading {
-  padding: 1rem;
-}
 .header-shell {
   height: var(--header-height);
   z-index: 100;
@@ -264,10 +261,6 @@ onMounted(() => {
   background: transparent;
 }
 
-.has-transparent-background {
-  background: transparent;
-}
-
 .header-text-item {
   padding: 0 12px;
   max-width: 200px;
@@ -280,5 +273,90 @@ onMounted(() => {
   background: #069867;
   text-transform: uppercase;
   font-style: bold;
+}
+
+.loader {
+  height: 32px;
+  width: 32px;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  margin: auto;
+}
+.loader span {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  margin: auto;
+  height: 32px;
+  width: 32px;
+}
+.loader span::before,
+.loader span::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  margin: auto;
+  height: 32px;
+  width: 32px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  opacity: 0;
+  -webkit-animation: loader-1 1.5s cubic-bezier(0.075, 0.82, 0.165, 1) infinite;
+  animation: loader-1 1.5s cubic-bezier(0.075, 0.82, 0.165, 1) infinite;
+}
+@-webkit-keyframes loader-1 {
+  0% {
+    -webkit-transform: translate3d(0, 0, 0) scale(0);
+    opacity: 1;
+  }
+  100% {
+    -webkit-transform: translate3d(0, 0, 0) scale(1.5);
+    opacity: 0;
+  }
+}
+@keyframes loader-1 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.5);
+    opacity: 0;
+  }
+}
+.loader span::after {
+  -webkit-animation: loader-2 1.5s cubic-bezier(0.075, 0.82, 0.165, 1) 0.25s infinite;
+  animation: loader-2 1.5s cubic-bezier(0.075, 0.82, 0.165, 1) 0.25s infinite;
+}
+@-webkit-keyframes loader-2 {
+  0% {
+    -webkit-transform: translate3d(0, 0, 0) scale(0);
+    opacity: 1;
+  }
+  100% {
+    -webkit-transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0;
+  }
+}
+@keyframes loader-2 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0;
+  }
 }
 </style>
