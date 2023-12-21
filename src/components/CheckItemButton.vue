@@ -48,13 +48,21 @@ function toggleItemChecked() {
   z-index: 100;
 }
 
-.check-button:hover .check-button-circle:before,
 .check-button-checked .check-button-circle:before {
   font-size: 0.9rem;
   position: absolute;
   top: 0;
   left: 3px;
   content: "\2713";
+}
+@media (hover: hover) and (pointer: fine) {
+  .check-button:hover .check-button-circle:before {
+    font-size: 0.9rem;
+    position: absolute;
+    top: 0;
+    left: 3px;
+    content: "\2713";
+  }
 }
 
 .check-button-circle {

@@ -329,8 +329,11 @@ function handleAddCommaSeparatedItems(): void {
   /* padding: 10px 15px; */
   position: relative;
 }
-.item:hover {
-  background: var(--color-link-hover);
+
+@media (hover: hover) and (pointer: fine) {
+  .item:hover {
+    background: var(--color-link-hover);
+  }
 }
 .item.is-active {
   background: var(--color-link-hover);
