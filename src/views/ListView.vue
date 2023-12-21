@@ -62,15 +62,13 @@ watch(
 type HTMLRef = null | HTMLElement;
 const addItemInput: Ref<HTMLRef> = ref(null);
 
-function focusAddItemInput(): void {
-  if (!addItemInput.value) return;
-  addItemInput.value.focus();
+function itemCheckToggled(): void {
+  console.log("itemCheckToggled");
 }
 
 function submitAddItem() {
   listsStore.addItem(listIdParam.value, newItemName.value);
   newItemName.value = "";
-  focusAddItemInput();
 }
 
 function toggleCheckedList() {
@@ -117,7 +115,6 @@ function handleAddCommaSeparatedItems(): void {
   }
 
   newItemName.value = "";
-  focusAddItemInput();
 }
 </script>
 
@@ -220,7 +217,7 @@ function handleAddCommaSeparatedItems(): void {
                 :class="{ 'is-active': itemIdParam === item.id }"
                 class="item"
               >
-                <CheckItemButton :listId="listIdParam" :item="item" @item-check-toggled="focusAddItemInput()" />
+                <CheckItemButton :listId="listIdParam" :item="item" @item-check-toggled="itemCheckToggled()" />
                 <RouterLink :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }">
                   {{ item.name }}
                 </RouterLink>
@@ -253,7 +250,7 @@ function handleAddCommaSeparatedItems(): void {
                   :class="{ 'is-active': itemIdParam === item.id }"
                   class="item"
                 >
-                  <CheckItemButton :listId="listIdParam" :item="item" @item-check-toggled="focusAddItemInput()" />
+                  <CheckItemButton :listId="listIdParam" :item="item" @item-check-toggled="itemCheckToggled()" />
                   <RouterLink :to="{ name: LIST_ITEM, params: { listId: listIdParam, itemId: item.id } }">
                     {{ item.name }}
                   </RouterLink>
