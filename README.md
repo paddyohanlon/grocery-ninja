@@ -2,7 +2,7 @@
 
 ## Local development
 
-See `.env.development` for RethinkID mock server configuration variables.
+See `.env.development` for Bazaar mock server configuration variables.
 
 ## Offline development
 

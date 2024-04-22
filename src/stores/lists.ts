@@ -1,19 +1,19 @@
 import { defineStore } from "pinia";
-import { rid } from "@/rethinkid";
-import type { Changes } from "@/rethinkid";
+import { bzr } from "@/bzr";
+import type { Changes } from "@/bzr";
 import { mirror } from "@/pinia/sdk-store-sync-method";
 import { useUserStore } from "@/stores/user";
 import type { List, NewList, ListItem } from "@/types";
 import { v4 as uuidv4 } from "uuid";
-import type { CollectionAPI, GrantedPermission } from "@rethinkid/rethinkid-js-sdk";
+import type { CollectionAPI, GrantedPermission } from "@bzr/bazaar";
 import { useStorage } from "@vueuse/core";
 
 export const LISTS_COLLECTION_NAME = "lists";
 
-const myListsCollection = rid.collection(LISTS_COLLECTION_NAME);
+const myListsCollection = bzr.collection(LISTS_COLLECTION_NAME);
 
 export function getOwnedOrSharedListsCollection(ownerId: string): CollectionAPI {
-  return rid.collection(LISTS_COLLECTION_NAME, { userId: ownerId });
+  return bzr.collection(LISTS_COLLECTION_NAME, { userId: ownerId });
 }
 
 function replaceListOnline(list: List) {
@@ -44,7 +44,7 @@ export const useListsStore = defineStore("lists", {
       ownedAndSharedRemoteLists.push(...myRemoteLists);
 
       // Get lists shared-with-me
-      const permissionsGrantedToMe = await rid.permissions.granted.list({
+      const permissionsGrantedToMe = await bzr.permissions.granted.list({
         collectionName: LISTS_COLLECTION_NAME,
       });
 
@@ -64,7 +64,7 @@ export const useListsStore = defineStore("lists", {
         // and I don't own this list, it's probably an artifact from
         // a different account. Delete it.
         if (!remoteList) {
-          const userInfo = await rid.social.getUser();
+          const userInfo = await bzr.social.getUser();
           const myUserId = userInfo.id;
 
           if (localList.ownerId !== myUserId) {
@@ -101,7 +101,7 @@ export const useListsStore = defineStore("lists", {
     async mirrorSharedWithMeLists(): Promise<void> {
       if (!window.navigator.onLine) return;
 
-      const permissionsGrantedToMe = await rid.permissions.granted.list({
+      const permissionsGrantedToMe = await bzr.permissions.granted.list({
         collectionName: LISTS_COLLECTION_NAME,
       });
 
@@ -119,7 +119,7 @@ export const useListsStore = defineStore("lists", {
       }
 
       // Subscribe to new permissions
-      rid.permissions.granted.subscribe(
+      bzr.permissions.granted.subscribe(
         {
           collectionName: LISTS_COLLECTION_NAME,
         },

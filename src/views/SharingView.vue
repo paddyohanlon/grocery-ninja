@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import type { Ref } from "vue";
-import { rid } from "@/rethinkid";
+import { bzr } from "@/bzr";
 import { LISTS_COLLECTION_NAME } from "@/stores/lists";
 import { STATE_CHANGE_DURATION_MS } from "@/timing";
 import { useRoute } from "vue-router";
 import { useListsStore } from "@/stores/lists";
-import { useNotificationsStore } from "@/stores/notifications";
 import {
   PermissionType,
   type FilterObject,
@@ -15,16 +14,15 @@ import {
   type Permission,
   type PermissionTemplate,
   type NewPermission,
-} from "@rethinkid/rethinkid-js-sdk";
+} from "@bzr/bazaar";
 
 const route = useRoute();
 
 const listsStore = useListsStore();
-const notificationsStore = useNotificationsStore();
 
 const permissions: Ref<Permission[]> = ref([]);
 function fetchPermissions(): void {
-  rid.permissions.list().then((response) => {
+  bzr.permissions.list().then((response) => {
     permissions.value = response;
   });
 }
@@ -32,7 +30,7 @@ fetchPermissions();
 
 const links: Ref<Link[]> = ref([]);
 function fetchLinks() {
-  rid.permissions.links.list().then((response) => {
+  bzr.permissions.links.list().then((response) => {
     links.value = response;
     console.log("links.value", links.value);
   });
@@ -41,7 +39,7 @@ fetchLinks();
 
 const permissionsGrantedToMe: Ref<GrantedPermission[]> = ref([]);
 function fetchPermissionsGrantedToMe() {
-  rid.permissions.granted.list().then((response) => {
+  bzr.permissions.granted.list().then((response) => {
     permissionsGrantedToMe.value = response;
   });
 }
@@ -73,13 +71,17 @@ async function submitCreateLink() {
     id: resourceInputValue.value,
   };
 
+  const listName = listsStore.getList(resourceInputValue.value)?.name;
+
   const permission: PermissionTemplate = {
     collectionName: LISTS_COLLECTION_NAME,
     types: [PermissionType.READ, PermissionType.INSERT, PermissionType.UPDATE, PermissionType.DELETE],
     filter: filterObject,
   };
 
-  const link = await rid.permissions.links.create(permission, limitInputValue.value);
+  console.log("is number?", typeof limitInputValue.value);
+
+  const link = await bzr.permissions.links.create(permission, `Link to share ${listName} list`, limitInputValue.value);
   console.log("createLink response", link);
 
   links.value.push(link);
@@ -88,7 +90,7 @@ async function submitCreateLink() {
 }
 
 function deletePermission(permissionId: string) {
-  rid.permissions.delete(permissionId).then((res) => {
+  bzr.permissions.delete(permissionId).then((res) => {
     console.log("delete permission res", res);
     fetchPermissions();
   });
@@ -96,14 +98,14 @@ function deletePermission(permissionId: string) {
 
 function deleteLink(linkId: string) {
   console.log("linkId", linkId);
-  rid.permissions.links.delete(linkId).then((res) => {
+  bzr.permissions.links.delete(linkId).then((res) => {
     console.log("deleted link res:", res);
     links.value = links.value.filter((l) => l.id !== linkId);
   });
 }
 
 function deleteShared(grantedPermissionId: string) {
-  rid.permissions.granted.delete(grantedPermissionId).then((res) => {
+  bzr.permissions.granted.delete(grantedPermissionId).then((res) => {
     console.log("delete granted (shared with me) permission. res", res);
     permissionsGrantedToMe.value = permissionsGrantedToMe.value.filter((pg) => pg.id !== grantedPermissionId);
   });
@@ -134,31 +136,13 @@ async function submitShareWithUser() {
     filter: filterObject,
   };
 
-  const response = await rid.permissions.create(newPermission);
+  const response = await bzr.permissions.create(newPermission);
 
   const permission: Permission = { id: response.id, ...newPermission };
 
   permissions.value.push(permission);
 
   userIdInputValue.value = "";
-}
-
-function openPermissionsModel() {
-  if (!resourceInputValue.value) {
-    notificationsStore.addNotification("Select a list to share first");
-    return;
-  }
-  const filterObject: FilterObject = {
-    id: resourceInputValue.value,
-  };
-
-  const permissionTemplate: PermissionTemplate = {
-    collectionName: LISTS_COLLECTION_NAME,
-    types: [PermissionType.READ, PermissionType.INSERT, PermissionType.UPDATE, PermissionType.DELETE],
-    filter: filterObject,
-  };
-
-  rid.permissions.openModal(permissionTemplate);
 }
 </script>
 
@@ -168,12 +152,6 @@ function openPermissionsModel() {
   </header>
 
   <div class="sharing-grid">
-    <div class="card">
-      <h2>Modal</h2>
-      <ul class="list-reset">
-        <li><button class="button" @click="openPermissionsModel()">Open Permissions Modal</button></li>
-      </ul>
-    </div>
     <!-- Form to explicitly share -->
     <div class="card">
       <h2>Share List with User</h2>
@@ -245,6 +223,7 @@ function openPermissionsModel() {
             <ul class="list-reset">
               <li>List Name: {{ listsStore.getList(l.permission.filter?.id as string)?.name }}</li>
               <li>Used: {{ l.users?.length }}/{{ l.limit }} (users/limit)</li>
+              <li>Description: {{ l.description }}</li>
               <li>
                 Link: <a href="{{ l.url }}">{{ l.url }}</a>
               </li>
@@ -291,3 +270,4 @@ function openPermissionsModel() {
 </template>
 
 <style scoped></style>
+@/bzr

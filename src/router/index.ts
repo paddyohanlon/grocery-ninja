@@ -7,7 +7,7 @@ import ListView from "../views/ListView.vue";
 import ListItemView from "../views/ListItemView.vue";
 import PageNotFoundView from "../views/PageNotFoundView.vue";
 import { HOME, CONTACTS, LISTS, LIST, LIST_ITEM, PAGE_NOT_FOUND, SHARING } from "@/router/route-names";
-import { rid } from "@/rethinkid";
+import { bzr } from "@/bzr";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -56,7 +56,7 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   // If route requires auth
   if (to.matched.some((record) => record.meta.requiresAuth !== false)) {
-    if (!rid.isLoggedIn()) {
+    if (!bzr.isLoggedIn()) {
       // Redirect to the sign in view if no token found and route requires auth
       next({ name: "home" });
       return;

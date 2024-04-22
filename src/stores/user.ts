@@ -1,12 +1,13 @@
 import { defineStore } from "pinia";
 import { useStorage } from "@vueuse/core";
-import { rid } from "@/rethinkid";
+import { bzr } from "@/bzr";
 
 export const useUserStore = defineStore("user", {
   state: () => ({
     loggedIn: useStorage("loggedIn", false),
     userId: useStorage("userId", ""),
     name: useStorage("name", ""),
+    handle: useStorage("handle", ""),
     email: useStorage("email", ""),
     online: window.navigator.onLine,
   }),
@@ -21,10 +22,11 @@ export const useUserStore = defineStore("user", {
     async fetchUserInfo(): Promise<void> {
       if (!window.navigator.onLine) return;
 
-      const userInfo = await rid.social.getUser();
+      const userInfo = await bzr.social.getUser();
       this.userId = userInfo.id;
       this.name = userInfo.name || "";
       this.email = userInfo.email || "";
+      this.handle = userInfo.handle || "";
     },
   },
 });

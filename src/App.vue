@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { RouterLink, RouterView } from "vue-router";
-import { rid } from "@/rethinkid";
+import { bzr } from "@/bzr";
 import { useUserStore } from "@/stores/user.js";
 import { useListsStore } from "@/stores/lists";
 import { useNotificationsStore } from "@/stores/notifications";
@@ -27,15 +27,15 @@ async function onLogin() {
 
   await userStore.fetchUserInfo();
 
-  rid.onApiConnect(async () => {
+  bzr.onApiConnect(async () => {
     console.log("On update: onApiConnect. Sync!");
     listsStore.syncLists();
   });
 
-  rid.onApiConnectError(async (rid, message) => {
+  bzr.onApiConnectError(async (bzr, message) => {
     console.log("On update: onApiConnectError. Message:", message);
     if (message.includes("invalid_token")) {
-      rid.logOut();
+      bzr.logOut();
     }
   });
 
@@ -51,20 +51,20 @@ function goToFromAccountDropdown(routeName: string) {
   accountDropdownIsVisible.value = false;
 }
 
-if (rid.isLoggedIn()) {
+if (bzr.isLoggedIn()) {
   onLogin();
 } else {
   userStore.setLoggedIn(false);
   loading.value = false;
 
-  rid.onLogin(async () => {
+  bzr.onLogin(async () => {
     onLogin();
   });
 }
 
 function logOut() {
   console.log("logOut");
-  rid.logOut();
+  bzr.logOut();
 }
 
 function toggleAccountDropdown() {
@@ -73,21 +73,6 @@ function toggleAccountDropdown() {
 
 function closeAccountDropdown() {
   accountDropdownIsVisible.value = false;
-}
-
-/**
- * Copy user ID to clipboard
- */
-const copyButtonTextInitial = "Copy user ID";
-const copyButtonText = ref(copyButtonTextInitial);
-
-function copyToClipboard(): void {
-  copyButtonText.value = "Copied!";
-  navigator.clipboard.writeText(userStore.userId);
-
-  setTimeout(() => {
-    copyButtonText.value = copyButtonTextInitial;
-  }, 1000);
 }
 
 function onWindowClick(event: any) {
@@ -103,7 +88,7 @@ function onEscapeKeyDown(event: any) {
 
 async function login() {
   try {
-    await rid.login();
+    await bzr.login();
   } catch (e: any) {
     console.log("e.message", e.message);
     notificationsStore.addNotification(e.message);
@@ -127,10 +112,10 @@ onMounted(() => {
         <div class="header-region-right">
           <div v-if="!userStore.online" class="header-item-highlight header-text-item">Offline</div>
           <template v-if="!userStore.loggedIn">
-            <button @click="login()" class="header-button link-button">Sign In</button>
+            <button @click="login()" class="header-button link-button">Log in or Sign up</button>
           </template>
           <template v-else>
-            <div class="header-text-item">{{ userStore.email }}</div>
+            <div class="header-text-item">@{{ userStore.handle }}</div>
             <button
               @click.stop="toggleAccountDropdown"
               class="header-button link-button"
@@ -158,13 +143,8 @@ onMounted(() => {
               aria-labelledby="toggle-account-button"
             >
               <ul class="account-dropdown-list list-reset">
-                <li>{{ userStore.name }}</li>
-                <li>
-                  {{ userStore.userId }}
-                  <button class="button is-small-text" @click="copyToClipboard">
-                    {{ copyButtonText }}
-                  </button>
-                </li>
+                <li>{{ userStore.name }} (@{{ userStore.handle }})</li>
+                <li>{{ userStore.email }}</li>
                 <template v-if="userStore.online">
                   <li><button @click="goToFromAccountDropdown(CONTACTS)" class="link-button">Contacts</button></li>
                   <li><button @click="goToFromAccountDropdown(SHARING)" class="link-button">Sharing</button></li>
@@ -360,3 +340,4 @@ onMounted(() => {
   }
 }
 </style>
+@/bzr

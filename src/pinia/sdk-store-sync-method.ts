@@ -1,4 +1,4 @@
-import type { CollectionAPI } from "@rethinkid/rethinkid-js-sdk";
+import type { CollectionAPI } from "@bzr/bazaar";
 
 // TODO
 // unsubscribe (could return the unsubscribe function from sync())

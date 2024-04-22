@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import type { Ref } from "vue";
-import { rid } from "@/rethinkid";
-import type { Contact } from "@rethinkid/rethinkid-js-sdk";
+import { bzr } from "@/bzr";
+import type { Contact } from "@bzr/bazaar";
 
 const contacts: Ref<Contact[]> = ref([]);
 
-rid.social.contacts.list().then((fetchedContacts) => {
+bzr.social.contacts.list().then((fetchedContacts) => {
   console.log("fetchedContacts", fetchedContacts);
   for (const contact of fetchedContacts) {
     contacts.value.push(contact);
   }
 });
+
+function openModel() {
+  bzr.social.openModal((userId) => {
+    console.log("selected", userId);
+  });
+}
 </script>
 
 <template>
@@ -24,7 +30,9 @@ rid.social.contacts.list().then((fetchedContacts) => {
       <div class="card">
         <h2>Modal</h2>
         <ul class="list-reset">
-          <li><button class="button" @click="rid.social.openModal()">Open Social Modal</button></li>
+          <li>
+            <button class="button" @click="openModel">Open Social Modal</button>
+          </li>
         </ul>
       </div>
 
@@ -43,3 +51,4 @@ rid.social.contacts.list().then((fetchedContacts) => {
 </template>
 
 <style scoped></style>
+@/bzr

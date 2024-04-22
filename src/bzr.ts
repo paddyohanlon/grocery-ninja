@@ -1,23 +1,23 @@
-import { RethinkID } from "@rethinkid/rethinkid-js-sdk";
-import type { Options } from "@rethinkid/rethinkid-js-sdk";
+import { BazaarApp } from "@bzr/bazaar";
+import type { BazaarOptions } from "@bzr/bazaar";
 
-const config: Options = {
-  appId: import.meta.env.VITE_RETHINKID_APP_ID,
-  loginRedirectUri: import.meta.env.VITE_RETHINKID_REDIRECT_URI,
-  onApiConnectError: async (rid, message) => {
+const config: BazaarOptions = {
+  appId: import.meta.env.VITE_BAZAAR_APP_ID,
+  loginRedirectUri: import.meta.env.VITE_BAZAAR_REDIRECT_URI,
+  onApiConnectError: async (bzr, message) => {
     console.log("On Init: onApiConnectError. Message:", message);
     if (message.includes("invalid_token")) {
-      rid.logOut();
+      bzr.logOut();
     }
   },
 };
 
-if (import.meta.env.VITE_RETHINKID_USE_MOCK || import.meta.env.DEV) {
+if (import.meta.env.VITE_BAZAAR_USE_MOCK || import.meta.env.DEV) {
   console.log("Using mock urls in ENV:", import.meta.env.MODE);
-  config.rethinkIdUri = import.meta.env.VITE_RETHINKID_MOCK_SERVER_URL;
+  config.bazaarUri = import.meta.env.VITE_BAZAAR_MOCK_SERVER_URL;
 }
 
-export const rid = new RethinkID(config);
+export const bzr = new BazaarApp(config);
 
 export type Changes = {
   newDoc: null | object;
