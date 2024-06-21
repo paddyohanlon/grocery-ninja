@@ -1,19 +1,18 @@
 import { defineStore } from "pinia";
 import { bzr } from "@/bzr";
-import type { Changes } from "@/bzr";
-import { mirror } from "@/pinia/sdk-store-sync-method";
+import { createSubscribeListener } from "@/pinia/sdk-store-sync-method";
 import { useUserStore } from "@/stores/user";
 import type { List, NewList, ListItem } from "@/types";
 import { v4 as uuidv4 } from "uuid";
-import type { CollectionAPI, GrantedPermission } from "@bzr/bazaar";
+import type { CollectionAPI, GrantedPermission, SubscribeListener } from "@bzr/bazaar";
 import { useStorage } from "@vueuse/core";
 
 export const LISTS_COLLECTION_NAME = "lists";
 
-const myListsCollection = bzr.collection(LISTS_COLLECTION_NAME);
+const myListsCollection = bzr.collection<List>(LISTS_COLLECTION_NAME);
 
-export function getOwnedOrSharedListsCollection(ownerId: string): CollectionAPI {
-  return bzr.collection(LISTS_COLLECTION_NAME, { userId: ownerId });
+export function getOwnedOrSharedListsCollection(ownerId: string): CollectionAPI<List> {
+  return bzr.collection<List>(LISTS_COLLECTION_NAME, { userId: ownerId });
 }
 
 function replaceListOnline(list: List) {
@@ -83,7 +82,7 @@ export const useListsStore = defineStore("lists", {
     async mirrorMyLists(): Promise<void> {
       if (!window.navigator.onLine) return;
 
-      mirror(this.lists, myListsCollection);
+      myListsCollection.subscribeAll({}, createSubscribeListener(this.lists));
     },
     async createList(name: string): Promise<string> {
       const userStore = useUserStore();
@@ -111,24 +110,33 @@ export const useListsStore = defineStore("lists", {
         const docId = grantedPermission.permission?.filter?.id as string | undefined;
         if (!docId) return;
 
-        mirror(this.lists, collection, { docId });
+        collection.subscribeOne(docId, createSubscribeListener(this.lists));
       };
 
       for (const grantedPermission of permissionsGrantedToMe) {
         mirrorGrantedPermission(grantedPermission);
       }
 
+      const subscribeListener: SubscribeListener<GrantedPermission> = {
+        onAdd: (doc) => {
+          console.log("Granted Permission added");
+          mirrorGrantedPermission(doc);
+        },
+        onChange: (doc) => {
+          console.log("Granted Permission updated");
+          mirrorGrantedPermission(doc);
+        },
+        onInitial: (doc) => {
+          console.log("Granted Permission onInitial", doc);
+        },
+      };
+
       // Subscribe to new permissions
       bzr.permissions.granted.subscribe(
         {
           collectionName: LISTS_COLLECTION_NAME,
         },
-        (changes: Changes) => {
-          console.log("Granted Permission added or updated", changes);
-          if (changes.newDoc) {
-            mirrorGrantedPermission(changes.newDoc as GrantedPermission);
-          }
-        },
+        subscribeListener,
       );
     },
     updateList(updatedList: List): void {

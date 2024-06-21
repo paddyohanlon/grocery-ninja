@@ -18,18 +18,3 @@ if (import.meta.env.VITE_BAZAAR_USE_MOCK || import.meta.env.DEV) {
 }
 
 export const bzr = new BazaarApp(config);
-
-export type Changes = {
-  newDoc: null | object;
-  oldDoc: null | object;
-};
-
-export function isAddedChange(changes: Changes) {
-  return changes.newDoc && changes.oldDoc === null;
-}
-export function isDeletedChange(changes: Changes) {
-  return changes.newDoc === null && changes.oldDoc;
-}
-export function isUpdatedChange(changes: Changes) {
-  return changes.newDoc && changes.oldDoc;
-}

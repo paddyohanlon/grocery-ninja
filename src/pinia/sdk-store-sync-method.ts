@@ -1,107 +1,41 @@
-import type { CollectionAPI } from "@bzr/bazaar";
+import type { Doc, SubscribeListener } from "@bzr/bazaar";
 
-// TODO
-// unsubscribe (could return the unsubscribe function from sync())
-// Make module
-// Move to SDK, publish test and all that.
+export function createSubscribeListener<T extends Doc>(storeProperty: Doc[]): SubscribeListener<T> {
+  const onAdd = (doc: Doc) => {
+    if (storeProperty.some((r: Doc) => r.id === doc.id)) return;
+    storeProperty.push(doc);
+  };
 
-type Changes = {
-  newDoc: null | object;
-  oldDoc: null | object;
-};
-
-type ResourceOptions = {
-  docId?: string;
-};
-
-export async function mirror(storeProperty: any[], table: CollectionAPI, { docId = "" }: ResourceOptions = {}) {
-  const resource = new Resource(storeProperty, table, { docId });
-  resource.mirror();
-}
-
-class Resource {
-  private _storeProperty: any[];
-  private _collection: CollectionAPI;
-  private _docId: string;
-
-  constructor(storeProperty: any[], table: CollectionAPI, { docId = "" }: ResourceOptions = {}) {
-    this._storeProperty = storeProperty;
-    this._collection = table;
-    this._docId = docId;
-  }
-
-  async mirror() {
-    await this._addDocsToProperty();
-    this._subscribe();
-  }
-
-  private async _addDocsToProperty() {
-    interface Doc {
-      id: string;
-    }
-    let docs: Doc[] = [];
-
-    if (this._docId) {
-      const doc = (await this._collection.getOne(this._docId)) as Doc;
-      docs = [doc];
-    } else {
-      docs = await this._collection.getAll();
-    }
-
-    for (const doc of docs) {
-      if (!doc) continue;
-
-      if (this._storeProperty.some((r: any) => r.id === doc.id)) {
-        this._updateDoc(doc);
-      } else {
-        this._addDoc(doc);
-      }
-    }
-  }
-
-  private _addDoc(doc: any) {
-    if (this._storeProperty.some((r: any) => r.id === doc.id)) return;
-    this._storeProperty.push(doc);
-  }
-
-  private _updateDoc(doc: any) {
-    this._storeProperty.forEach((r: any, index: number) => {
+  const handleChange = (doc: Doc) => {
+    storeProperty.forEach((r: Doc, index: number) => {
       if (r.id === doc.id) {
-        this._storeProperty[index] = doc;
+        storeProperty[index] = doc;
       }
     });
-  }
+  };
 
-  private _deleteDoc(doc: any) {
-    for (let i = this._storeProperty.length - 1; i >= 0; i--) {
-      if (this._storeProperty[i].id === doc.id) {
-        this._storeProperty.splice(i, 1);
+  const onDelete = (doc: Doc) => {
+    for (let i = storeProperty.length - 1; i >= 0; i--) {
+      if (storeProperty[i].id === doc.id) {
+        storeProperty.splice(i, 1);
       }
     }
-  }
+  };
 
-  private _subscribe() {
-    const listener = (changes: Changes) => {
-      const isAdded = (changes: Changes) => changes.newDoc && changes.oldDoc === null;
-      const isUpdated = (changes: Changes) => changes.newDoc && changes.oldDoc;
-      const isDeleted = (changes: Changes) => changes.newDoc === null && changes.oldDoc;
-
-      if (isAdded(changes)) {
-        // console.log("Mirror added", changes);
-        this._addDoc(changes.newDoc);
-      } else if (isUpdated(changes)) {
-        // console.log("Mirror updated", changes);
-        this._updateDoc(changes.newDoc);
-      } else if (isDeleted(changes)) {
-        // console.log("Mirror deleted", changes);
-        this._deleteDoc(changes.oldDoc);
-      }
-    };
-
-    if (this._docId) {
-      this._collection.subscribeOne(this._docId, listener);
+  const onInitial = (doc: Doc) => {
+    if (storeProperty.some((r: any) => r.id === doc.id)) {
+      handleChange(doc);
     } else {
-      this._collection.subscribeAll({}, listener);
+      onAdd(doc);
     }
-  }
+  };
+
+  return {
+    onAdd,
+    onChange: (oldDoc: Doc, newDoc: Doc) => {
+      handleChange(newDoc);
+    },
+    onDelete,
+    onInitial,
+  };
 }
