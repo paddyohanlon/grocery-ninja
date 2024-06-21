@@ -79,8 +79,6 @@ async function submitCreateLink() {
     filter: filterObject,
   };
 
-  console.log("is number?", typeof limitInputValue.value);
-
   const link = await bzr.permissions.links.create(permission, `Link to share ${listName} list`, limitInputValue.value);
   console.log("createLink response", link);
 
