@@ -1,9 +1,14 @@
 import { defineStore } from "pinia";
-import { bzr, createSubscribeListener } from "@/bzr";
+import { bzr } from "@/bzr";
 import { useUserStore } from "@/stores/user";
 import type { List, NewList, ListItem } from "@/types";
 import { v4 as uuidv4 } from "uuid";
-import type { CollectionAPI, GrantedPermission, SubscribeListener } from "@bzr/bazaar";
+import {
+  arrayMirrorSubscribeListener,
+  type CollectionAPI,
+  type GrantedPermission,
+  type SubscribeListener,
+} from "@bzr/bazaar";
 import { useStorage } from "@vueuse/core";
 
 export const LISTS_COLLECTION_NAME = "lists";
@@ -81,7 +86,7 @@ export const useListsStore = defineStore("lists", {
     async mirrorMyLists(): Promise<void> {
       if (!window.navigator.onLine) return;
 
-      myListsCollection.subscribeAll({}, createSubscribeListener(this.lists));
+      myListsCollection.subscribeAll({}, arrayMirrorSubscribeListener(this.lists));
     },
     async createList(name: string): Promise<string> {
       const userStore = useUserStore();
@@ -109,7 +114,7 @@ export const useListsStore = defineStore("lists", {
         const docId = grantedPermission.permission?.filter?.id as string | undefined;
         if (!docId) return;
 
-        collection.subscribeOne(docId, createSubscribeListener(this.lists));
+        collection.subscribeOne(docId, arrayMirrorSubscribeListener(this.lists));
       };
 
       for (const grantedPermission of permissionsGrantedToMe) {
