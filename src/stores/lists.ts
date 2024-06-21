@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
-import { bzr } from "@/bzr";
-import { createSubscribeListener } from "@/pinia/sdk-store-sync-method";
+import { bzr, createSubscribeListener } from "@/bzr";
 import { useUserStore } from "@/stores/user";
 import type { List, NewList, ListItem } from "@/types";
 import { v4 as uuidv4 } from "uuid";
