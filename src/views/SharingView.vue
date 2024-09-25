@@ -8,22 +8,25 @@ import { useRoute } from "vue-router";
 import { useListsStore } from "@/stores/lists";
 import {
   PermissionType,
+  GranteeType,
   type FilterObject,
   type GrantedPermission,
   type Link,
   type Permission,
   type PermissionTemplate,
   type NewPermission,
+  type UserPermission,
 } from "@bzr/bazaar";
 
 const route = useRoute();
 
 const listsStore = useListsStore();
 
-const permissions: Ref<Permission[]> = ref([]);
+const permissions: Ref<UserPermission[]> = ref([]);
 function fetchPermissions(): void {
   bzr.permissions.list().then((response) => {
-    permissions.value = response;
+    const userPermissions = response as UserPermission[];
+    permissions.value = userPermissions;
   });
 }
 fetchPermissions();
@@ -73,13 +76,17 @@ async function submitCreateLink() {
 
   const listName = listsStore.getList(resourceInputValue.value)?.name;
 
-  const permission: PermissionTemplate = {
+  const linkPermissionTemplate: PermissionTemplate = {
     collectionName: LISTS_COLLECTION_NAME,
     types: [PermissionType.READ, PermissionType.INSERT, PermissionType.UPDATE, PermissionType.DELETE],
     filter: filterObject,
   };
 
-  const link = await bzr.permissions.links.create(permission, `Link to share ${listName} list`, limitInputValue.value);
+  const link = await bzr.permissions.links.create(
+    linkPermissionTemplate,
+    `Link to share ${listName} list`,
+    limitInputValue.value,
+  );
   console.log("createLink response", link);
 
   links.value.push(link);
@@ -129,7 +136,8 @@ async function submitShareWithUser() {
 
   const newPermission: NewPermission = {
     collectionName: LISTS_COLLECTION_NAME,
-    userId: userIdInputValue.value,
+    granteeId: userIdInputValue.value,
+    granteeType: GranteeType.USER,
     types: [PermissionType.READ, PermissionType.INSERT, PermissionType.UPDATE, PermissionType.DELETE],
     filter: filterObject,
   };
@@ -240,11 +248,11 @@ async function submitShareWithUser() {
         <li v-for="p in permissions" :key="p.id">
           <ul class="list-reset">
             <li>List Name: {{ listsStore.getList(p.filter?.id as string)?.name }}</li>
-            <li>User ID: {{ p.userId }}</li>
+            <li>Grantee type: {{ p.granteeType }}</li>
+            <li>Grantee ID: {{ p.granteeId }}</li>
           </ul>
           <div class="button-list">
-            <!-- TODO: ID should always be present -->
-            <button class="button button-danger" @click="deletePermission(p.id || '')">Delete Permission</button>
+            <button class="button button-danger" @click="deletePermission(p.id)">Delete Permission</button>
           </div>
         </li>
       </ul>

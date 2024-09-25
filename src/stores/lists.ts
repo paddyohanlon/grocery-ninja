@@ -5,6 +5,7 @@ import type { List, NewList, ListItem } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 import {
   arrayMirrorSubscribeListener,
+  type GrantedPermissionsQuery,
   type CollectionAPI,
   type GrantedPermission,
   type SubscribeListener,
@@ -16,7 +17,7 @@ export const LISTS_COLLECTION_NAME = "lists";
 const myListsCollection = bzr.collection<List>(LISTS_COLLECTION_NAME);
 
 export function getOwnedOrSharedListsCollection(ownerId: string): CollectionAPI<List> {
-  return bzr.collection<List>(LISTS_COLLECTION_NAME, { userId: ownerId });
+  return bzr.createContext({ ownerId }).collection<List>(LISTS_COLLECTION_NAME);
 }
 
 function replaceListOnline(list: List) {
@@ -135,13 +136,12 @@ export const useListsStore = defineStore("lists", {
         },
       };
 
+      const query: GrantedPermissionsQuery = {
+        collectionName: LISTS_COLLECTION_NAME,
+      };
+
       // Subscribe to new permissions
-      bzr.permissions.granted.subscribe(
-        {
-          collectionName: LISTS_COLLECTION_NAME,
-        },
-        subscribeListener,
-      );
+      bzr.permissions.granted.subscribe(query, subscribeListener);
     },
     updateList(updatedList: List): void {
       const listsCollection = getOwnedOrSharedListsCollection(updatedList.ownerId);
